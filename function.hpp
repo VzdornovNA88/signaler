@@ -29,7 +29,8 @@
   ****************************************************************************** 
   */
 
-#pragma once
+#ifndef _FUNCTION_
+#define _FUNCTION_
 
 template < typename T > class function;
 
@@ -191,6 +192,18 @@ public:
     return *this;
   }
 
+  function& operator=( std::nullptr_t const null_object ) {
+    if( storage_deleter )
+      storage_deleter( store );
+    return *this = bind( null_object );
+  }
+
+  function& operator=( int const null_object ) {
+    if( storage_deleter )
+      storage_deleter( store );
+    return *this = bind( null_object );
+  }
+
   template < R (* const f)(A...) >
   static function bind() noexcept {
     return { nullptr, f_wraper<f> };
@@ -245,6 +258,14 @@ public:
     return const_pair<T>( &o, m );
   }
 
+  static function bind( std::nullptr_t const null_object ) {
+    return null_object;
+  }
+
+  static function bind( int const null_object ) {
+    return nullptr;
+  }
+
   void swap( function& other ) noexcept { 
     std::swap( *this, other ); 
   }
@@ -274,9 +295,8 @@ public:
   }
 
   R operator()( A... args ) const {
-    if( object != nullptr )
-      return wraper( object, std::forward<A>(args)... );
-    else
-      return R();
+    return wraper( object, std::forward<A>(args)... );
   }
 };
+
+#endif  //_FUNCTION_
