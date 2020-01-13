@@ -139,6 +139,10 @@ std::cout << "end" << std::endl;
   signal_to_signal2(1111111);
 
   signal_to_signal2.disconnect( connection );
+  
+  // std::cout << "start copy signal" << std::endl;
+  // signal_int1 = signal_to_signal2;
+  // std::cout << "end copy signal" << std::endl;
 
   std::function< void (int) > std_func = foo;
 

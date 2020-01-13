@@ -9,8 +9,9 @@ namespace signals {
 template <typename... Args>
 class signal {
 
-  using slot_t          = function<void(Args...)>;
-  
+  using slot_t = function<void(Args...)>;
+  mutable std::set<slot_t> slots;
+
  public:
 
   using connection_id_t = typename std::set<slot_t>::const_iterator;
@@ -20,6 +21,12 @@ class signal {
   signal( signal const& other ) {
     std::cout << "signal(signal const& other)" << std::endl;
     slots = other.slots;
+  }
+
+  signal& operator=(signal const& other) {
+    disconnect();
+    slots = other.slots;
+    return *this;
   }
 
   template <typename T>
@@ -51,13 +58,6 @@ class signal {
       slot(std::forward<Args>(p)...);
     }
   }
-
-  // signal& operator=(signal const& other) {
-  //   disconnect_all();
-  // }
-
- private:
-  mutable std::set<slot_t> slots;
 };
 
 }
