@@ -34,6 +34,8 @@
 
 #include <cmath>
 
+namespace signals {
+
 template < typename T > class function;
 
 template< class R, class ...A >
@@ -452,5 +454,7 @@ public:
     return wraper( object, std::forward<A>(args)... );
   }
 };
+
+}
 
 #endif  //_FUNCTION_
