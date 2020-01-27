@@ -43,27 +43,13 @@ class function< R (A...) >
 {
   using wraper_t  = R (*)( void*, A&&... );
   using deleter_t = void (*)( void* );
+  using ref_counter_t = unsigned char;
 
   /// Function content
   void*           object             = nullptr;
   wraper_t        wraper             = nullptr;
   void*           store              = nullptr;
   deleter_t       storage_deleter    = nullptr;
-  unsigned short* ref_store_counter  = nullptr;
-
-  /**
-    ****************************************************************************** 
-    * @todo instead of three pointers i need to use 
-    * structure of storage for functors, it is main 
-    * idea for optimisation of memory
-    *
-    * template <typename T> struct store_t {
-    *    using deleter_t = void (*)( void* );   
-    *    void*           store              = nullptr;
-    *    deleter_t       storage_deleter    = nullptr;
-    *    unsigned short* ref_store_counter  = nullptr;
-    * } 
-    */
 
   function( void* const o, wraper_t const m ) noexcept : 
   object(o),wraper(m) {}
@@ -130,26 +116,24 @@ class function< R (A...) >
   template < class T >
   static void deleter( void* _store ) {
 
-    static_cast< T* >(_store)->~T();
+    static_cast< ref_counter_t* >(_store)->~ref_counter_t();
+    static_cast< T* >(static_cast<void*>((ref_counter_t*)_store + 1))->~T();
     operator delete (_store);
     _store = nullptr;
   }
   
   void destructor() {
 
-    if( store             != nullptr && 
-        ref_store_counter != nullptr && *ref_store_counter == 0 ) {
+    if( store != nullptr && *(ref_counter_t*)store == 0 ) {
 
       storage_deleter( store );
-      delete ref_store_counter;
-      ref_store_counter = nullptr;
 
       std::cout << "destruct" << std::endl;
     }
     else
-    if( ref_store_counter != nullptr && *ref_store_counter > 0 ) {
+    if( store != nullptr && *(ref_counter_t*)store > 0 ) {
 
-      --(*ref_store_counter);
+      --(*(ref_counter_t*)store);
       store = nullptr;
 
       std::cout << "decrement" << std::endl;
@@ -171,29 +155,11 @@ public:
     wraper            = f.wraper;
     store             = f.store;
     storage_deleter   = f.storage_deleter;
-    ref_store_counter = f.ref_store_counter;
 
-    if( ref_store_counter != nullptr )
-      ++(*ref_store_counter);
+    if( store != nullptr )
+      ++(*(ref_counter_t*)store);
 
     std::cout << "function( function const& f ) " <<std::endl;
-  }
-
-  function( function&& f ) {
-    
-    if( store != nullptr ) 
-      destructor();
-
-    object            = f.object;
-    wraper            = f.wraper;
-    store             = f.store;
-    storage_deleter   = f.storage_deleter;
-    ref_store_counter = f.ref_store_counter;
-
-    if( ref_store_counter != nullptr )
-      ++(*ref_store_counter);
-
-    std::cout << "function( function&& f ) " << std::endl;
   }
 
   function( std::nullptr_t const ) noexcept : function() {}
@@ -233,17 +199,18 @@ public:
   typename = typename ::std::enable_if< 
      !::std::is_same<function, typename ::std::decay<T>::type>::value >::type >
   function(T&& f) : 
-  store( operator new( sizeof(typename std::decay<T>::type) ) ),
-  ref_store_counter( new unsigned short(0) ) {
+  store( operator new( sizeof(typename std::decay<T>::type) + 
+                       sizeof( ref_counter_t ) ) ) {
 
     std::cout << "function(T&& f) - start " << std::endl;
 
     using functor_t = typename std::decay<T>::type;
 
-    new (store) functor_t( std::forward<T>(f) );
+    new ( store ) ref_counter_t( 0 );
+    new ( static_cast<void*>((ref_counter_t*)store + 1) ) functor_t( std::forward<T>(f) );
 
     storage_deleter = deleter< functor_t >;
-    object          = store;
+    object          = static_cast<void*>((ref_counter_t*)store + 1);
     wraper          = call_operator< functor_t >;
   }
 
@@ -258,31 +225,11 @@ public:
     wraper            = f.wraper;
     store             = f.store;
     storage_deleter   = f.storage_deleter;
-    ref_store_counter = f.ref_store_counter;
 
-    if( ref_store_counter != nullptr )
-      ++(*ref_store_counter);
+    if( store != nullptr )
+      ++(*(ref_counter_t*)store);
 
     std::cout << "function& operator=( function const& f ) " << std::endl;
-
-    return *this;
-  }
-
-  function& operator=( function&& f ) {
-    
-    if( store != nullptr ) 
-      destructor();
-
-    object            = f.object;
-    wraper            = f.wraper;
-    store             = f.store;
-    storage_deleter   = f.storage_deleter;
-    ref_store_counter = f.ref_store_counter;
-
-    if( ref_store_counter != nullptr )
-      ++(*ref_store_counter);
-
-    std::cout << "function& operator=( function&& f ) " << std::endl;
 
     return *this;
   }
@@ -310,13 +257,13 @@ public:
     if( store != nullptr ) 
       destructor();
 
-    store = operator new( sizeof(functor_t) );
-    ref_store_counter = new unsigned short(0);
+    store = operator new( sizeof( functor_t ) + sizeof( ref_counter_t ) );
 
-    new (store) functor_t( std::forward<T>(f) );
+    new ( store ) ref_counter_t( 0 );
+    new ( static_cast<void*>((ref_counter_t*)store + 1) ) functor_t( std::forward<T>(f) );
 
     storage_deleter = deleter< functor_t >;
-    object          = store;
+    object          = static_cast<void*>((ref_counter_t*)store + 1);
     wraper          = call_operator< functor_t >;
 
     return *this;
