@@ -49,7 +49,7 @@ class function< R (A...) >
   void*           object             = nullptr;
   wraper_t        wraper             = nullptr;
   void*           store              = nullptr;
-  deleter_t       storage_deleter    = nullptr;
+  // deleter_t       storage_deleter    = nullptr;
 
   function( void* const o, wraper_t const m ) noexcept : 
   object(o),wraper(m) {}
@@ -117,7 +117,8 @@ class function< R (A...) >
   static void deleter( void* _store ) {
 
     static_cast< ref_counter_t* >(_store)->~ref_counter_t();
-    static_cast< T* >(static_cast<void*>((ref_counter_t*)_store + 1))->~T();
+    static_cast< T* >(static_cast<void*>(static_cast<deleter_t*>(
+                               static_cast<void*>((ref_counter_t*)_store + 1)) + 1))->~T();
     operator delete (_store);
     _store = nullptr;
   }
@@ -125,6 +126,10 @@ class function< R (A...) >
   void destructor() {
 
     if( store != nullptr && *(ref_counter_t*)store == 0 ) {
+
+      
+      auto storage_deleter =  *static_cast<deleter_t*>(
+                               static_cast<void*>((ref_counter_t*)store + 1));
 
       storage_deleter( store );
 
@@ -154,7 +159,7 @@ public:
     object            = f.object;
     wraper            = f.wraper;
     store             = f.store;
-    storage_deleter   = f.storage_deleter;
+    // storage_deleter   = f.storage_deleter;
 
     if( store != nullptr )
       ++(*(ref_counter_t*)store);
@@ -199,18 +204,26 @@ public:
   typename = typename ::std::enable_if< 
      !::std::is_same<function, typename ::std::decay<T>::type>::value >::type >
   function(T&& f) : 
-  store( operator new( sizeof(typename std::decay<T>::type) + 
-                       sizeof( ref_counter_t ) ) ) {
+  store( operator new(  sizeof( ref_counter_t )                + 
+                        sizeof( deleter_t )                    +
+                        sizeof( typename std::decay<T>::type ) ) ) {
 
     std::cout << "function(T&& f) - start " << std::endl;
+    std::cout << "size  =  " << sizeof(typename std::decay<T>::type) << std::endl;
 
     using functor_t = typename std::decay<T>::type;
 
-    new ( store ) ref_counter_t( 0 );
-    new ( static_cast<void*>((ref_counter_t*)store + 1) ) functor_t( std::forward<T>(f) );
+    auto ref_cnt = store;
+    new ( ref_cnt ) ref_counter_t( 0 );
 
-    storage_deleter = deleter< functor_t >;
-    object          = static_cast<void*>((ref_counter_t*)store + 1);
+    auto del = static_cast<void*>((ref_counter_t*)ref_cnt + 1);
+    new ( del ) deleter_t( deleter< functor_t > );
+
+    auto functor = static_cast<void*>((deleter_t*)del + 1);
+    new ( functor ) functor_t( std::forward<T>(f) );
+
+    // storage_deleter = deleter< functor_t >;
+    object          = functor;
     wraper          = call_operator< functor_t >;
   }
 
@@ -224,7 +237,7 @@ public:
     object            = f.object;
     wraper            = f.wraper;
     store             = f.store;
-    storage_deleter   = f.storage_deleter;
+    // storage_deleter   = f.storage_deleter;
 
     if( store != nullptr )
       ++(*(ref_counter_t*)store);
@@ -257,13 +270,21 @@ public:
     if( store != nullptr ) 
       destructor();
 
-    store = operator new( sizeof( functor_t ) + sizeof( ref_counter_t ) );
+    store = operator new( sizeof( ref_counter_t ) + 
+                          sizeof( deleter_t )     +
+                          sizeof( functor_t )     );
 
-    new ( store ) ref_counter_t( 0 );
-    new ( static_cast<void*>((ref_counter_t*)store + 1) ) functor_t( std::forward<T>(f) );
+    auto ref_cnt = store;
+    new ( ref_cnt ) ref_counter_t( 0 );
 
-    storage_deleter = deleter< functor_t >;
-    object          = static_cast<void*>((ref_counter_t*)store + 1);
+    auto del = static_cast<void*>((ref_counter_t*)ref_cnt + 1);
+    new ( del ) deleter_t( deleter< functor_t > );
+
+    auto functor = static_cast<void*>((deleter_t*)del + 1);
+    new ( functor ) functor_t( std::forward<T>(f) );
+
+    // storage_deleter = deleter< functor_t >;
+    object          = functor;
     wraper          = call_operator< functor_t >;
 
     return *this;

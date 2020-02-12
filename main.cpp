@@ -29,7 +29,7 @@ struct A
     func(a+1);
   }
 
-  function<void (int)> func = function<void (int)>::bind<A, &A::foo>(this);
+   function<void (int)> func = function<void (int)>::bind<A, &A::foo>(nullptr);
 };
 
 void foo(int a)
@@ -49,7 +49,8 @@ struct B {
 int main(int argc, char* argv[])
 {
   auto d1(function<void (int)>::bind<foo>());
-
+ 
+  std::cout << "A create start" << std::endl;
   A a;
   auto d2(function<void (int)>::bind<A, &A::foo>(&a));
   auto d3(function<void (int)>{foo});
@@ -63,6 +64,7 @@ int main(int argc, char* argv[])
 {
   int b(2);
 
+  std::cout << "dx create start" << std::endl;
   auto dx(function<void ()>(
     [&,b](){std::cout << "hello world: " << b << std::endl;}));
 
@@ -140,9 +142,9 @@ std::cout << "end" << std::endl;
 
   signal_to_signal2.disconnect( connection );
   
-  // std::cout << "start copy signal" << std::endl;
-  // signal_int1 = signal_to_signal2;
-  // std::cout << "end copy signal" << std::endl;
+  std::cout << "start copy signal" << std::endl;
+  signal_int1 = signal_to_signal2;
+  std::cout << "end copy signal" << std::endl;
 
   std::function< void (int) > std_func = foo;
 
