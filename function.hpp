@@ -39,15 +39,15 @@ template < typename T > class function;
 template< class R, class ...A >
 class function< R (A...) >
 {
-  using wraper_t  = R (*)( void*, A&&... );
-  using deleter_t = void (*)( void* );
+  using wraper_t      = R (*)( void*, A&&... );
+  using deleter_t     = void (*)( void* );
   using ref_counter_t = unsigned char;
 
 
   /// Function content
-  void*           object             = nullptr;
-  wraper_t        wraper             = nullptr;
-  void*           store              = nullptr;
+  void*       object  = nullptr;
+  wraper_t    wraper  = nullptr;
+  void*       store   = nullptr;
 
   function( void* const o, wraper_t const m ) noexcept : 
   object(o),wraper(m) {}
@@ -173,9 +173,9 @@ public:
 
     destructor();
 
-    object            = f.object;
-    wraper            = f.wraper;
-    store             = f.store;
+    object = f.object;
+    wraper = f.wraper;
+    store  = f.store;
 
     if( store != nullptr )
       ++(*get_ref_counter( store ));
@@ -233,19 +233,19 @@ public:
     auto functor = static_cast<void*>(get_store<functor_t>( store ));
     new ( functor ) functor_t( std::forward<T>(f) );
 
-    object          = functor;
-    wraper          = call_operator< functor_t >;
+    object = functor;
+    wraper = call_operator< functor_t >;
   }
 
 
 /// copy operator
-  function& operator=( function const& f ) {
+  function& operator = ( function const& f ) {
 
     destructor();
 
-    object            = f.object;
-    wraper            = f.wraper;
-    store             = f.store;
+    object = f.object;
+    wraper = f.wraper;
+    store  = f.store;
 
     if( store != nullptr )
       ++(*get_ref_counter( store ));
@@ -256,7 +256,7 @@ public:
 
 /// assignment operators
   template < class T >
-  function& operator=( R (T::* const m)(A...) ) {
+  function& operator = ( R (T::* const m)(A...) ) {
 
     return *this = bind( static_cast<T*>(object), m );
   }
@@ -270,7 +270,7 @@ public:
   template < typename T,
              typename = typename ::std::enable_if<!::std::is_same<function, 
                         typename ::std::decay<T>::type>::value >::type  >
-  function& operator=( T&& f ) {
+  function& operator = ( T&& f ) {
 
     using functor_t = typename std::decay<T>::type;
 
@@ -288,19 +288,19 @@ public:
     auto functor = static_cast<void*>(get_store<functor_t>( store ));
     new ( functor ) functor_t( std::forward<T>(f) );
 
-    object          = functor;
-    wraper          = call_operator< functor_t >;
+    object = functor;
+    wraper = call_operator< functor_t >;
 
     return *this;
   }
 
-  function& operator=( std::nullptr_t const null_object ) {
+  function& operator = ( std::nullptr_t const null_object ) {
 
     destructor();
     return *this = bind( null_object );
   }
 
-  function& operator=( int const null_object ) {
+  function& operator = ( int const null_object ) {
 
     destructor();
     return *this = bind( null_object );

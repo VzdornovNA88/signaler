@@ -50,10 +50,12 @@ class signal {
   signal() {}
 
   signal( signal const& other ) {
+    
     slots = other.slots;
   }
 
-  signal& operator=(signal const& other) {
+  signal& operator = (signal const& other) {
+
     disconnect();
     slots = other.slots;
     return *this;
@@ -61,23 +63,28 @@ class signal {
 
   template <typename T>
   auto connect( T *inst, void (T::*func)(Args...) ) const {
+
     return slots.emplace( inst,func ).first;
   }
 
   template <typename T>
   auto connect( T *inst, void (T::*func)(Args...) const ) const {
+
     return slots.emplace( inst,func ).first;
   }
 
   connection_id_t connect( slot_t const& slot ) const {
+
     return slots.emplace( slot ).first;
   }
 
   void disconnect( connection_id_t id ) const {
+
     slots.erase( id );
   }
 
   void disconnect() const {
+
     slots.clear();
   }
 
