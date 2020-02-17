@@ -32,8 +32,6 @@
 #ifndef _FUNCTION_
 #define _FUNCTION_
 
-#include <cmath>
-
 namespace signals {
 
 template < typename T > class function;
@@ -45,19 +43,19 @@ class function< R (A...) >
   using deleter_t = void (*)( void* );
   using ref_counter_t = unsigned char;
 
+
   /// Function content
   void*           object             = nullptr;
   wraper_t        wraper             = nullptr;
   void*           store              = nullptr;
-  // deleter_t       storage_deleter    = nullptr;
 
   function( void* const o, wraper_t const m ) noexcept : 
   object(o),wraper(m) {}
 
+
   /// Private type traits
   template < class T >
   using pair = std::pair< T* const, R (T::* const)(A...) >;
-
   template < class T >
   using const_pair = std::pair< T const* const, R (T::* const)(A...) const >;
 
@@ -71,100 +69,116 @@ class function< R (A...) >
   template <class T>
   struct is_const_pair< std::pair<T const* const,R (T::* const)(A...) const> > : std::true_type {};
 
+
   /// Wrapers
   template < R (*f)(A...) >
   static R f_wraper( void* const, A&&... args ) {
-    
-    std::cout << "f_wraper" << std::endl;
+
     return f( std::forward<A>(args)... );
   }
 
   template < class T, R (T::*m)(A...) >
   static R m_wraper( void* const o, A&&... args ) {
 
-    std::cout << "m_wraper" << std::endl;
     return (static_cast<T*>(o)->*m)( std::forward<A>(args)... );
   }
 
   template < class T, R (T::*m)(A...) const >
   static R m_wraper_const(void* const o, A&&... args) {
 
-    std::cout << "m_wraper_const" << std::endl;
     return (static_cast<T const*>(o)->*m)( std::forward<A>(args)... );
   }
 
   template <typename T>
   static typename std::enable_if< !(is_pair<T>::value || 
-                                      is_const_pair<T>::value), R >::type
+                                    is_const_pair<T>::value), R >::type
   call_operator(void* const o, A&&... args) {
 
-    std::cout << "call_operator 1" << std::endl;
     return (*static_cast<T*>(o))(std::forward<A>(args)...);
   }
 
   template <typename T>
   static typename std::enable_if< is_pair<T>::value ||                  
-                                    is_const_pair<T>::value, R >::type
+                                  is_const_pair<T>::value, R >::type
   call_operator(void* const _o, A&&... args) {
 
-    std::cout << "call_operator 2" << std::endl;
     auto o = static_cast<T*>(_o)->first;
     auto m = static_cast<T*>(_o)->second;
+
     return (o->*m)( std::forward<A>(args)... );
+  }
+
+
+/// helpers
+  static auto get_ref_counter( void* _store ) {
+
+    return static_cast<ref_counter_t*> ( _store );
+  }
+
+  static auto get_deleter( void* _store ) {
+
+    return static_cast<deleter_t*>     (
+           static_cast<void*>          ( 
+           static_cast<ref_counter_t*> ( _store ) + 1) );
+  }
+
+  template < class T >
+  static auto get_store( void* _store ) {
+
+    return static_cast< T* >           (
+           static_cast<void*>          (
+           static_cast<deleter_t*>     (
+           static_cast<void*>          ( 
+           static_cast<ref_counter_t*> ( _store ) + 1) ) + 1) );
   }
 
   template < class T >
   static void deleter( void* _store ) {
 
-    static_cast< ref_counter_t* >(_store)->~ref_counter_t();
-    static_cast< T* >(static_cast<void*>(static_cast<deleter_t*>(
-                               static_cast<void*>((ref_counter_t*)_store + 1)) + 1))->~T();
+    get_ref_counter( _store )->~ref_counter_t();
+    get_store<T>   ( _store )->~T();
+          
     operator delete (_store);
     _store = nullptr;
   }
   
   void destructor() {
 
-    if( store != nullptr && *(ref_counter_t*)store == 0 ) {
+    if( store == nullptr ) return;
 
-      
-      auto storage_deleter =  *static_cast<deleter_t*>(
-                               static_cast<void*>((ref_counter_t*)store + 1));
+    ref_counter_t ref_cnt = *get_ref_counter( store );
 
-      storage_deleter( store );
+    if( ref_cnt == 0 ) {
 
-      std::cout << "destruct" << std::endl;
+      (*get_deleter( store ))( store );
     }
-    else
-    if( store != nullptr && *(ref_counter_t*)store > 0 ) {
+    else {
 
-      --(*(ref_counter_t*)store);
+      --ref_cnt;
       store = nullptr;
-
-      std::cout << "decrement" << std::endl;
     }
   }
 
 public:
 
+
+/// destructor
   ~function() { destructor(); }
 
+
+/// constructors
   function() = default;
 
   function( function const& f ) {
 
-    if( store != nullptr ) 
-      destructor();
+    destructor();
 
     object            = f.object;
     wraper            = f.wraper;
     store             = f.store;
-    // storage_deleter   = f.storage_deleter;
 
     if( store != nullptr )
-      ++(*(ref_counter_t*)store);
-
-    std::cout << "function( function const& f ) " <<std::endl;
+      ++(*get_ref_counter( store ));
   }
 
   function( std::nullptr_t const ) noexcept : function() {}
@@ -179,6 +193,7 @@ public:
 
   template < class T >
   function( T* const o, R (T::* const m)(A...) ) {
+
     *this = bind( o, m );
   }
 
@@ -201,52 +216,45 @@ public:
   }
 
   template < typename T,
-  typename = typename ::std::enable_if< 
-     !::std::is_same<function, typename ::std::decay<T>::type>::value >::type >
+             typename = typename ::std::enable_if< !::std::is_same<function, 
+                        typename ::std::decay<T>::type>::value >::type >
   function(T&& f) : 
   store( operator new(  sizeof( ref_counter_t )                + 
                         sizeof( deleter_t )                    +
                         sizeof( typename std::decay<T>::type ) ) ) {
 
-    std::cout << "function(T&& f) - start " << std::endl;
-    std::cout << "size  =  " << sizeof(typename std::decay<T>::type) << std::endl;
-
     using functor_t = typename std::decay<T>::type;
 
-    auto ref_cnt = store;
-    new ( ref_cnt ) ref_counter_t( 0 );
+    new ( get_ref_counter( store ) ) ref_counter_t( 0 );
 
-    auto del = static_cast<void*>((ref_counter_t*)ref_cnt + 1);
+    auto del = static_cast<void*>(get_deleter( store ));
     new ( del ) deleter_t( deleter< functor_t > );
 
-    auto functor = static_cast<void*>((deleter_t*)del + 1);
+    auto functor = static_cast<void*>(get_store<functor_t>( store ));
     new ( functor ) functor_t( std::forward<T>(f) );
 
-    // storage_deleter = deleter< functor_t >;
     object          = functor;
     wraper          = call_operator< functor_t >;
   }
 
+
+/// copy operator
   function& operator=( function const& f ) {
 
-    std::cout << "function& operator=( function const& f )start " << std::endl;
-
-    if( store != nullptr ) 
-      destructor();
+    destructor();
 
     object            = f.object;
     wraper            = f.wraper;
     store             = f.store;
-    // storage_deleter   = f.storage_deleter;
 
     if( store != nullptr )
-      ++(*(ref_counter_t*)store);
-
-    std::cout << "function& operator=( function const& f ) " << std::endl;
+      ++(*get_ref_counter( store ));
 
     return *this;
   }
 
+
+/// assignment operators
   template < class T >
   function& operator=( R (T::* const m)(A...) ) {
 
@@ -260,30 +268,26 @@ public:
   }
 
   template < typename T,
-  typename = typename ::std::enable_if< 
-     !::std::is_same<function, typename ::std::decay<T>::type>{} >::type  >
+             typename = typename ::std::enable_if<!::std::is_same<function, 
+                        typename ::std::decay<T>::type>::value >::type  >
   function& operator=( T&& f ) {
 
-    std::cout << "function& operator=( T&& f ) - start " << std::endl;
     using functor_t = typename std::decay<T>::type;
 
-    if( store != nullptr ) 
-      destructor();
+    destructor();
 
     store = operator new( sizeof( ref_counter_t ) + 
                           sizeof( deleter_t )     +
                           sizeof( functor_t )     );
 
-    auto ref_cnt = store;
-    new ( ref_cnt ) ref_counter_t( 0 );
+    new ( get_ref_counter( store ) ) ref_counter_t( 0 );
 
-    auto del = static_cast<void*>((ref_counter_t*)ref_cnt + 1);
+    auto del = static_cast<void*>(get_deleter( store ));
     new ( del ) deleter_t( deleter< functor_t > );
 
-    auto functor = static_cast<void*>((deleter_t*)del + 1);
+    auto functor = static_cast<void*>(get_store<functor_t>( store ));
     new ( functor ) functor_t( std::forward<T>(f) );
 
-    // storage_deleter = deleter< functor_t >;
     object          = functor;
     wraper          = call_operator< functor_t >;
 
@@ -292,20 +296,18 @@ public:
 
   function& operator=( std::nullptr_t const null_object ) {
 
-    if( store != nullptr ) 
-      destructor();
-
+    destructor();
     return *this = bind( null_object );
   }
 
   function& operator=( int const null_object ) {
 
-    if( store != nullptr ) 
-      destructor();
-
+    destructor();
     return *this = bind( null_object );
   }
 
+
+/// binders
   template < R (* const f)(A...) >
   static function bind() noexcept {
 
@@ -381,11 +383,15 @@ public:
     return nullptr;
   }
 
+
+/// swap 
   void swap( function& other ) noexcept { 
 
     std::swap( *this, other ); 
   }
 
+
+/// comparison operators
   bool operator==( function const& r ) const noexcept {
 
     return (object == r.object) && (wraper == r.wraper);
@@ -411,14 +417,17 @@ public:
     return wraper;
   }
 
+
+/// conversion to bool
   explicit operator bool() const noexcept { 
 
     return wraper; 
   }
 
+
+/// callable
   R operator()( A... args ) const {
 
-    std::cout << "R operator()( A... args ) const" << std::endl;
     return wraper( object, std::forward<A>(args)... );
   }
 };
