@@ -38,7 +38,7 @@
 namespace signals {
 
 template <typename... Args>
-class signal {
+class signal final {
 
   using slot_t = function<void(Args...)>;
   mutable std::set<slot_t> slots;
