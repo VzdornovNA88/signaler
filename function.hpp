@@ -108,6 +108,11 @@ class function< R (A...) > final {
     return (o->*m)( std::forward<A>(args)... );
   }
 
+  static R call_operator(void* const o, A&&... args) {
+
+    return (*reinterpret_cast<R(*)(A...)>(o))(std::forward<A>(args)...);
+  }
+
 
 /// helpers
   static auto get_ref_counter( void* _store ) {
@@ -216,8 +221,9 @@ public:
   }
 
   template < typename T,
-             typename = typename ::std::enable_if< !::std::is_same<function, 
-                        typename ::std::decay<T>::type>::value >::type >
+             typename = typename ::std::enable_if<
+             !::std::is_same<function,typename ::std::decay<T>::type>::value &&
+             !::std::is_function<T>::value >::type  >
   function(T&& f) : 
   store( operator new(  sizeof( ref_counter_t )                + 
                         sizeof( deleter_t )                    +
@@ -235,6 +241,16 @@ public:
 
     object = functor;
     wraper = call_operator< functor_t >;
+  }
+
+  template < typename T,
+             typename = typename ::std::enable_if<
+             !::std::is_same<function,typename ::std::decay<T>::type>::value &&
+              ::std::is_function<T>::value >::type  >
+  function(T* f) {
+
+    object = reinterpret_cast< void* >( f );
+    wraper = call_operator;
   }
 
 
@@ -268,8 +284,9 @@ public:
   }
 
   template < typename T,
-             typename = typename ::std::enable_if<!::std::is_same<function, 
-                        typename ::std::decay<T>::type>::value >::type  >
+             typename = typename ::std::enable_if<
+             !::std::is_same<function,typename ::std::decay<T>::type>::value &&
+             !::std::is_function<T>::value >::type  >
   function& operator = ( T&& f ) {
 
     using functor_t = typename std::decay<T>::type;
@@ -290,6 +307,20 @@ public:
 
     object = functor;
     wraper = call_operator< functor_t >;
+
+    return *this;
+  }
+
+  template < typename T,
+             typename = typename ::std::enable_if<
+             !::std::is_same<function,typename ::std::decay<T>::type>::value &&
+              ::std::is_function<T>::value >::type >
+  function& operator = ( T* f ) {
+
+    destructor();
+
+    object = reinterpret_cast< void* >( f );
+    wraper = call_operator;
 
     return *this;
   }
