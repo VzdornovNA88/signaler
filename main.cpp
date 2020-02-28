@@ -148,6 +148,15 @@ std::cout << "end" << std::endl;
 
   std::function< void (int) > std_func = foo;
 
+  {
+  ::signal<int> signal_int10;
+
+  signal_int10.connect<A,&A::foo1>( &a );
+  signal_int10.connect<A,&A::foo> ( &a );
+
+  signal_int10(1010101010);
+  }
+
 
   std::cout << "d3 = " << sizeof( d3 ) << std::endl;
   std::cout << "std_func = " << sizeof( std_func ) << std::endl;

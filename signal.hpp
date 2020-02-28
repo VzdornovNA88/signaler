@@ -60,20 +60,34 @@ class signal final {
     slots = other.slots;
     return *this;
   }
-
+  
   template <typename T>
+  [[deprecated("Memory allocation in heap for storing the function ! size allocation = ( 2*size_t + sizeof( T ) )")]]
   auto connect( T *inst, void (T::*func)(Args...) ) const {
 
     return slots.emplace( inst,func ).first;
   }
 
   template <typename T>
+  [[deprecated("Memory allocation in heap for storing the function ! size allocation = ( 2*size_t + sizeof( T ) )")]]
   auto connect( T *inst, void (T::*func)(Args...) const ) const {
 
     return slots.emplace( inst,func ).first;
   }
 
-  connection_id_t connect( slot_t const& slot ) const {
+  template <typename T, void (T::*func)(Args...)>
+  auto connect( T *inst ) const {
+
+    return slots.insert( function<void (int)>::template bind<T, func>( inst ) );
+  }
+
+  template <typename T, void (T::*func)(Args...) const>
+  auto connect( T *inst ) const {
+
+    return slots.insert( function<void (int)>::template bind<T, func>( inst ) );
+  }
+
+  auto connect( slot_t const& slot ) const {
 
     return slots.emplace( slot ).first;
   }
