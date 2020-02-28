@@ -174,18 +174,6 @@ public:
 /// constructors
   function_t() = default;
 
-  function_t( function_t const& f ) {
-
-    destructor();
-
-    object = f.object;
-    wraper = f.wraper;
-    store  = f.store;
-
-    if( store != nullptr )
-      ++(*get_ref_counter( store ));
-  }
-
   function_t( std::nullptr_t const ) : function_t() {}
 
   template < typename T, 
@@ -254,6 +242,35 @@ public:
   }
 
 
+/// copy constructor
+function_t( function_t const& f ) {
+
+    destructor();
+
+    object = f.object;
+    wraper = f.wraper;
+    store  = f.store;
+
+    if( store != nullptr )
+      ++(*get_ref_counter( store ));
+  }
+
+
+/// move constructor
+function_t( function_t&& f ) {
+
+    destructor();
+
+    object = f.object;
+    wraper = f.wraper;
+    store  = f.store;
+
+    f.object = nullptr;
+    f.wraper = nullptr;
+    f.store  = nullptr;
+  }
+
+
 /// copy operator
   function_t& operator = ( function_t const& f ) {
 
@@ -265,6 +282,23 @@ public:
 
     if( store != nullptr )
       ++(*get_ref_counter( store ));
+
+    return *this;
+  }
+
+
+/// move operator
+  function_t& operator = ( function_t&& f ) {
+
+    destructor();
+
+    object = f.object;
+    wraper = f.wraper;
+    store  = f.store;
+
+    f.object = nullptr;
+    f.wraper = nullptr;
+    f.store  = nullptr;
 
     return *this;
   }
