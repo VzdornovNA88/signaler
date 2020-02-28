@@ -49,7 +49,7 @@ class function< R (A...) > final {
   wraper_t    wraper  = nullptr;
   void*       store   = nullptr;
 
-  function( void* const o, wraper_t const m ) noexcept : 
+  function( void* const o, wraper_t const m ) : 
   object(o),wraper(m) {}
 
 
@@ -186,15 +186,15 @@ public:
       ++(*get_ref_counter( store ));
   }
 
-  function( std::nullptr_t const ) noexcept : function() {}
+  function( std::nullptr_t const ) : function() {}
 
   template < class T, 
   typename = typename std::enable_if< std::is_class<T>::value >::type >
-  explicit function( T const* const o ) noexcept : object( const_cast<T*>(o) ) {}
+  explicit function( T const* const o ) : object( const_cast<T*>(o) ) {}
 
   template < class T, 
   typename = typename std::enable_if< std::is_class<T>::value >::type >
-  explicit function( T const& o ) noexcept : object( const_cast<T*>(&o) ) {}
+  explicit function( T const& o ) : object( const_cast<T*>(&o) ) {}
 
   template < class T >
   function( T* const o, R (T::* const m)(A...) ) {
@@ -340,31 +340,31 @@ public:
 
 /// binders
   template < R (* const f)(A...) >
-  static function bind() noexcept {
+  static function bind() {
 
     return { nullptr, f_wraper<f> };
   }
 
   template < class T, R (T::* const m)(A...) >
-  static function bind( T* const o ) noexcept {
+  static function bind( T* const o ) {
 
     return { o, m_wraper<T, m> };
   }
 
   template < class T, R (T::* const m)(A...) const >
-  static function bind( T const* const o ) noexcept {
+  static function bind( T const* const o ) {
 
     return { const_cast<T*>(o), m_wraper_const<T, m> };
   }
 
   template < class T, R (T::* const m)(A...) >
-  static function bind( T& o ) noexcept {
+  static function bind( T& o ) {
 
     return { &o, m_wraper<T, m> };
   }
 
   template < class T, R (T::* const m)(A...) const >
-  static function bind( T const& o ) noexcept {
+  static function bind( T const& o ) {
 
     return { const_cast<T*>(&o), m_wraper_const<T, m> };
   }
@@ -416,41 +416,41 @@ public:
 
 
 /// swap 
-  void swap( function& other ) noexcept { 
+  void swap( function& other ) { 
 
     std::swap( *this, other ); 
   }
 
 
 /// comparison operators
-  bool operator==( function const& r ) const noexcept {
+  bool operator==( function const& r ) const {
 
     return (object == r.object) && (wraper == r.wraper);
   }
 
-  bool operator!=( function const& r ) const noexcept {
+  bool operator!=( function const& r ) const {
 
     return !operator==(r);
   }
 
-  bool operator<( function const& r ) const noexcept {
+  bool operator<( function const& r ) const {
 
     return (object < r.object) || ((object == r.object) && (wraper < r.wraper));
   }
 
-  bool operator==( std::nullptr_t const ) const noexcept {
+  bool operator==( std::nullptr_t const ) const {
 
     return !wraper;
   }
 
-  bool operator!=( std::nullptr_t const ) const noexcept {
+  bool operator!=( std::nullptr_t const ) const {
 
     return wraper;
   }
 
 
 /// conversion to bool
-  explicit operator bool() const noexcept { 
+  explicit operator bool() const { 
 
     return wraper; 
   }
