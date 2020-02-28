@@ -41,7 +41,7 @@ class function< R (A...) > final {
 
   using wraper_t      = R (*)( void*, A&&... );
   using deleter_t     = void (*)( void* );
-  using ref_counter_t = unsigned char;
+  using ref_counter_t = size_t;
 
 
   /// Function content
