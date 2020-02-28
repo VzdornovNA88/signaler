@@ -37,24 +37,24 @@
 
 namespace signals {
 
-template <typename... Args>
-class signal final {
+template <typename... A>
+class signal_t final {
 
-  using slot_t = function<void(Args...)>;
+  using slot_t = function_t<void(A...)>;
   mutable std::set<slot_t> slots;
 
  public:
 
   using connection_id_t = typename std::set<slot_t>::const_iterator;
 
-  signal() {}
+  signal_t() {}
 
-  signal( signal const& other ) {
+  signal_t( signal_t const& other ) {
     
     slots = other.slots;
   }
 
-  signal& operator = (signal const& other) {
+  signal_t& operator = (signal_t const& other) {
 
     disconnect();
     slots = other.slots;
@@ -63,28 +63,28 @@ class signal final {
   
   template <typename T>
   [[deprecated("Memory allocation in heap for storing the function ! size allocation = ( 2*size_t + sizeof( T ) )")]]
-  auto connect( T *inst, void (T::*func)(Args...) ) const {
+  auto connect( T *o, void (T::*m)(A...) ) const {
 
-    return slots.emplace( inst,func ).first;
+    return slots.emplace( o,m ).first;
   }
 
   template <typename T>
   [[deprecated("Memory allocation in heap for storing the function ! size allocation = ( 2*size_t + sizeof( T ) )")]]
-  auto connect( T *inst, void (T::*func)(Args...) const ) const {
+  auto connect( T *o, void (T::*m)(A...) const ) const {
 
-    return slots.emplace( inst,func ).first;
+    return slots.emplace( o,m ).first;
   }
 
-  template <typename T, void (T::*func)(Args...)>
-  auto connect( T *inst ) const {
+  template <typename T, void (T::*m)(A...)>
+  auto connect( T *o ) const {
 
-    return slots.insert( function<void (int)>::template bind<T, func>( inst ) );
+    return slots.insert( function_t<void (int)>::template bind<T, m>( o ) );
   }
 
-  template <typename T, void (T::*func)(Args...) const>
-  auto connect( T *inst ) const {
+  template <typename T, void (T::*m)(A...) const>
+  auto connect( T *o ) const {
 
-    return slots.insert( function<void (int)>::template bind<T, func>( inst ) );
+    return slots.insert( function_t<void (int)>::template bind<T, m>( o ) );
   }
 
   auto connect( slot_t const& slot ) const {
@@ -102,10 +102,10 @@ class signal final {
     slots.clear();
   }
 
-  void operator()( Args... p ) const {
+  void operator()( A... p ) const {
 
     for(const auto& slot : slots)
-      slot(std::forward<Args>(p)...);
+      slot(std::forward<A>(p)...);
   }
 };
 

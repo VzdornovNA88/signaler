@@ -29,7 +29,7 @@ struct A
     func(a+1);
   }
 
-   function<void (int)> func = function<void (int)>::bind<A, &A::foo>(nullptr);
+   function_t<void (int)> func = function_t<void (int)>::bind<A, &A::foo>(nullptr);
 };
 
 void foo(int a)
@@ -44,17 +44,17 @@ struct B {
   }
 };
 
-::signal<int> signal_int2;
+::signal_t<int> signal_int2;
 
 int main(int argc, char* argv[])
 {
-  auto d1(function<void (int)>::bind<foo>());
+  auto d1(function_t<void (int)>::bind<foo>());
  
   std::cout << "A create start" << std::endl;
   A a;
-  auto d2(function<void (int)>::bind<A, &A::foo>(&a));
-  auto d3(function<void (int)>{foo});
-  auto d4(function<void (int)>(&a, &A::foo));
+  auto d2(function_t<void (int)>::bind<A, &A::foo>(&a));
+  auto d3(function_t<void (int)>{foo});
+  auto d4(function_t<void (int)>(&a, &A::foo));
 
   d1(1);
   d2(2);
@@ -65,7 +65,7 @@ int main(int argc, char* argv[])
   int b(2);
 
   std::cout << "dx create start" << std::endl;
-  auto dx(function<void ()>(
+  auto dx(function_t<void ()>(
     [&,b](){std::cout << "hello world: " << b << std::endl;}));
 
   dx();
@@ -101,7 +101,7 @@ if( dx_copy == nullptr )
 std::cout << "7" << std::endl;
 
 
-  signal<std::string, int> signal;
+  signal_t<std::string, int> signal;
 
   // attach a slot
   signal.connect([](std::string arg1, int arg2)mutable {
@@ -111,14 +111,14 @@ std::cout << "7" << std::endl;
   signal("The answer:", 42);
 
 
-  ::signal<int> signal_int;
+  ::signal_t<int> signal_int;
 
   signal_int.connect( &a, &A::foo );
 
   signal_int(333);
 
 
-  ::signal<int> signal_int1;
+  ::signal_t<int> signal_int1;
 
   signal_int1.connect( &a, &A::foo1 );
 
@@ -129,9 +129,9 @@ std::cout << "connect" << std::endl;
 std::cout << "call" << std::endl;
   signal_int2(333);
 std::cout << "end" << std::endl;
-  ::signal<int> signal_dummy;
+  ::signal_t<int> signal_dummy;
 
-  ::signal<int> signal_to_signal,signal_to_signal1,signal_to_signal2;
+  ::signal_t<int> signal_to_signal,signal_to_signal1,signal_to_signal2;
 
   
   B object_b;
@@ -149,7 +149,7 @@ std::cout << "end" << std::endl;
   std::function< void (int) > std_func = foo;
 
   {
-  ::signal<int> signal_int10;
+  ::signal_t<int> signal_int10;
 
   signal_int10.connect<A,&A::foo1>( &a );
   signal_int10.connect<A,&A::foo> ( &a );
@@ -169,7 +169,7 @@ std::cout << "end" << std::endl;
 
 
 
-// function<void (int)> func_object(signal_int2);
+// function_t<void (int)> func_object(signal_int2);
 // func_object(45454);
 
   return 0;
