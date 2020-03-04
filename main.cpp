@@ -29,7 +29,7 @@ struct A
     func(a+1);
   }
 
-   function_t<void (int)> func = function_t<void (int)>::bind<A, &A::foo>(nullptr);
+   function_t<void (int)> func = function_t<void (int)>::bind<A, &A::foo>(this);
 };
 
 void foo(int a)

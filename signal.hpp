@@ -78,13 +78,13 @@ class signal_t final {
   template <typename T, void (T::*m)(A...)>
   auto connect( T *o ) const {
 
-    return slots.insert( function_t<void (int)>::template bind<T, m>( o ) );
+    return slots.insert( function_t<void (A...)>::template bind<T, m>( o ) );
   }
 
   template <typename T, void (T::*m)(A...) const>
   auto connect( T *o ) const {
 
-    return slots.insert( function_t<void (int)>::template bind<T, m>( o ) );
+    return slots.insert( function_t<void (A...)>::template bind<T, m>( o ) );
   }
 
   auto connect( slot_t const& slot ) const {
