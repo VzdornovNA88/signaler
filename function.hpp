@@ -34,20 +34,161 @@
 
 namespace signals {
 
+
+// template< typename R, typename ...A >
+struct storage_t final {
+
+  using deleter_t     = void (*)( void* );
+  using ref_counter_t = size_t;
+
+  void* store = nullptr;
+
+
+static auto get_ref_counter( void* _store ) {
+
+    return static_cast<ref_counter_t*> ( _store );
+  }
+
+  static auto get_deleter( void* _store ) {
+
+    return static_cast<deleter_t*>     (
+           static_cast<void*>          ( 
+           static_cast<ref_counter_t*> ( _store ) + 1) );
+  }
+
+  template < typename T >
+  static auto get_store( void* _store ) {
+
+    return static_cast< T* >           (
+           static_cast<void*>          (
+           static_cast<deleter_t*>     (
+           static_cast<void*>          ( 
+           static_cast<ref_counter_t*> ( _store ) + 1) ) + 1) );
+  }
+
+  template < typename T >
+  static void deleter( void* _store ) {
+
+    get_ref_counter( _store )->~ref_counter_t();
+    get_store<T>   ( _store )->~T();
+          
+    operator delete (_store);
+    _store = nullptr;
+  }
+  
+  void destructor() {
+
+    if( store == nullptr ) return;
+
+    ref_counter_t ref_cnt = *get_ref_counter( store );
+
+    if( ref_cnt == 0 ) {
+
+      (*get_deleter( store ))( store );
+    }
+    else {
+
+      --ref_cnt;
+      store = nullptr;
+    }
+  }
+
+
+  storage_t() = default;
+  ~storage_t() { destructor(); }
+
+  /// copy constructor
+storage_t( storage_t const& s ) {
+
+    destructor();
+
+    store = s.store;
+
+    if( store != nullptr )
+      ++(*get_ref_counter( store ));
+}
+
+
+/// move constructor
+storage_t( storage_t&& s ) {
+
+    destructor();
+
+    store   = s.store;
+    s.store = nullptr;
+  }
+
+
+/// copy operator
+  storage_t& operator = ( storage_t const& s ) {
+
+    destructor();
+
+    store = s.store;
+
+    if( store != nullptr )
+      ++(*get_ref_counter( store ));
+
+    return *this;
+  }
+
+
+/// move operator
+  storage_t& operator = ( storage_t&& s ) {
+
+    destructor();
+
+    store   = s.store;
+    s.store = nullptr;
+
+    return *this;
+  }
+
+
+  template< typename T >
+  auto make( T&& f ) {
+
+    using functor_t = typename std::decay<T>::type;
+
+    destructor();
+
+    store = operator new( sizeof( ref_counter_t ) + 
+                          sizeof( deleter_t )     +
+                          sizeof( functor_t )     );
+
+    new ( get_ref_counter( store ) ) ref_counter_t( 0 );
+
+    auto del = static_cast<void*>(get_deleter( store ));
+    new ( del ) deleter_t( deleter< functor_t > );
+
+    auto functor = static_cast<void*>(get_store<functor_t>( store ));
+    new ( functor ) functor_t( std::forward<T>(f) );
+
+    return functor;
+  }
+
+  bool isInvalid() const {
+    return store == nullptr;
+  }
+
+};
+
+
 template < typename T > class function_t;
 
 template< typename R, typename ...A >
 class function_t< R (A...) > final {
 
-  using wraper_t      = R (*)( void*, A&&... );
-  using deleter_t     = void (*)( void* );
-  using ref_counter_t = size_t;
+  using wraper_t = R (*)( void*, A&&... );
+  // using deleter_t     = void (*)( void* );
+  // using ref_counter_t = size_t;
 
 
   /// Function content
-  void*       object  = nullptr;
-  wraper_t    wraper  = nullptr;
-  void*       store   = nullptr;
+  void*      object  = nullptr;
+  wraper_t   wraper  = nullptr;
+  storage_t  store   ;
+
 
   function_t( void* const o, wraper_t const m ) : 
   object(o),wraper(m) {}
@@ -115,60 +256,60 @@ class function_t< R (A...) > final {
 
 
 /// helpers
-  static auto get_ref_counter( void* _store ) {
+  // static auto get_ref_counter( void* _store ) {
 
-    return static_cast<ref_counter_t*> ( _store );
-  }
+  //   return static_cast<ref_counter_t*> ( _store );
+  // }
 
-  static auto get_deleter( void* _store ) {
+  // static auto get_deleter( void* _store ) {
 
-    return static_cast<deleter_t*>     (
-           static_cast<void*>          ( 
-           static_cast<ref_counter_t*> ( _store ) + 1) );
-  }
+  //   return static_cast<deleter_t*>     (
+  //          static_cast<void*>          ( 
+  //          static_cast<ref_counter_t*> ( _store ) + 1) );
+  // }
 
-  template < typename T >
-  static auto get_store( void* _store ) {
+  // template < typename T >
+  // static auto get_store( void* _store ) {
 
-    return static_cast< T* >           (
-           static_cast<void*>          (
-           static_cast<deleter_t*>     (
-           static_cast<void*>          ( 
-           static_cast<ref_counter_t*> ( _store ) + 1) ) + 1) );
-  }
+  //   return static_cast< T* >           (
+  //          static_cast<void*>          (
+  //          static_cast<deleter_t*>     (
+  //          static_cast<void*>          ( 
+  //          static_cast<ref_counter_t*> ( _store ) + 1) ) + 1) );
+  // }
 
-  template < typename T >
-  static void deleter( void* _store ) {
+  // template < typename T >
+  // static void deleter( void* _store ) {
 
-    get_ref_counter( _store )->~ref_counter_t();
-    get_store<T>   ( _store )->~T();
+  //   get_ref_counter( _store )->~ref_counter_t();
+  //   get_store<T>   ( _store )->~T();
           
-    operator delete (_store);
-    _store = nullptr;
-  }
+  //   operator delete (_store);
+  //   _store = nullptr;
+  // }
   
-  void destructor() {
+  // void destructor() {
 
-    if( store == nullptr ) return;
+  //   if( store == nullptr ) return;
 
-    ref_counter_t ref_cnt = *get_ref_counter( store );
+  //   ref_counter_t ref_cnt = *get_ref_counter( store );
 
-    if( ref_cnt == 0 ) {
+  //   if( ref_cnt == 0 ) {
 
-      (*get_deleter( store ))( store );
-    }
-    else {
+  //     (*get_deleter( store ))( store );
+  //   }
+  //   else {
 
-      --ref_cnt;
-      store = nullptr;
-    }
-  }
+  //     --ref_cnt;
+  //     store = nullptr;
+  //   }
+  // }
 
 public:
 
 
 /// destructor
-  ~function_t() { destructor(); }
+  // ~function_t() { destructor(); }
 
 
 /// constructors
@@ -212,22 +353,22 @@ public:
              typename = typename ::std::enable_if<
              !::std::is_same<function_t,typename ::std::decay<T>::type>::value &&
              !::std::is_function<T>::value >::type  >
-  function_t(T&& f) : 
+  function_t(T&& f) /*: 
   store( operator new(  sizeof( ref_counter_t )                + 
                         sizeof( deleter_t )                    +
-                        sizeof( typename std::decay<T>::type ) ) ) {
+                        sizeof( typename std::decay<T>::type ) ) )*/ {
 
     using functor_t = typename std::decay<T>::type;
 
-    new ( get_ref_counter( store ) ) ref_counter_t( 0 );
+    // new ( get_ref_counter( store ) ) ref_counter_t( 0 );
 
-    auto del = static_cast<void*>(get_deleter( store ));
-    new ( del ) deleter_t( deleter< functor_t > );
+    // auto del = static_cast<void*>(get_deleter( store ));
+    // new ( del ) deleter_t( deleter< functor_t > );
 
-    auto functor = static_cast<void*>(get_store<functor_t>( store ));
-    new ( functor ) functor_t( std::forward<T>(f) );
+    // auto functor = static_cast<void*>(get_store<functor_t>( store ));
+    // new ( functor ) functor_t( std::forward<T>(f) );
 
-    object = functor;
+    object = store.make< T >( std::forward<T>(f) );
     wraper = f_wraper< functor_t >;
   }
 
@@ -245,21 +386,21 @@ public:
 /// copy constructor
 function_t( function_t const& f ) {
 
-    destructor();
+    // destructor();
 
     object = f.object;
     wraper = f.wraper;
     store  = f.store;
 
-    if( store != nullptr )
-      ++(*get_ref_counter( store ));
+    // if( store != nullptr )
+    //   ++(*get_ref_counter( store ));
   }
 
 
 /// move constructor
 function_t( function_t&& f ) {
 
-    destructor();
+    // destructor();
 
     object = f.object;
     wraper = f.wraper;
@@ -267,21 +408,21 @@ function_t( function_t&& f ) {
 
     f.object = nullptr;
     f.wraper = nullptr;
-    f.store  = nullptr;
+    f.store.destructor();
   }
 
 
 /// copy operator
   function_t& operator = ( function_t const& f ) {
 
-    destructor();
+    // destructor();
 
     object = f.object;
     wraper = f.wraper;
     store  = f.store;
 
-    if( store != nullptr )
-      ++(*get_ref_counter( store ));
+    // if( store != nullptr )
+    //   ++(*get_ref_counter( store ));
 
     return *this;
   }
@@ -290,7 +431,7 @@ function_t( function_t&& f ) {
 /// move operator
   function_t& operator = ( function_t&& f ) {
 
-    destructor();
+    // destructor();
 
     object = f.object;
     wraper = f.wraper;
@@ -298,7 +439,7 @@ function_t( function_t&& f ) {
 
     f.object = nullptr;
     f.wraper = nullptr;
-    f.store  = nullptr;
+    f.store.destructor();
 
     return *this;
   }
@@ -325,21 +466,21 @@ function_t( function_t&& f ) {
 
     using functor_t = typename std::decay<T>::type;
 
-    destructor();
+    // destructor();
 
-    store = operator new( sizeof( ref_counter_t ) + 
-                          sizeof( deleter_t )     +
-                          sizeof( functor_t )     );
+    // store = operator new( sizeof( ref_counter_t ) + 
+    //                       sizeof( deleter_t )     +
+    //                       sizeof( functor_t )     );
 
-    new ( get_ref_counter( store ) ) ref_counter_t( 0 );
+    // new ( get_ref_counter( store ) ) ref_counter_t( 0 );
 
-    auto del = static_cast<void*>(get_deleter( store ));
-    new ( del ) deleter_t( deleter< functor_t > );
+    // auto del = static_cast<void*>(get_deleter( store ));
+    // new ( del ) deleter_t( deleter< functor_t > );
 
-    auto functor = static_cast<void*>(get_store<functor_t>( store ));
-    new ( functor ) functor_t( std::forward<T>(f) );
+    // auto functor = static_cast<void*>(get_store<functor_t>( store ));
+    // new ( functor ) functor_t( std::forward<T>(f) );
 
-    object = functor;
+    object = store.make< T >( std::forward<T>(f) );
     wraper = f_wraper< functor_t >;
 
     return *this;
@@ -351,23 +492,24 @@ function_t( function_t&& f ) {
               ::std::is_function<T>::value >::type >
   function_t& operator = ( T* f ) {
 
-    destructor();
+    // destructor();
 
     object = reinterpret_cast< void* >( f );
     wraper = f_wraper;
+    store.destructor();
 
     return *this;
   }
 
   function_t& operator = ( std::nullptr_t const null_object ) {
 
-    destructor();
+    // destructor();
     return *this = bind( null_object );
   }
 
   function_t& operator = ( int const null_object ) {
 
-    destructor();
+    // destructor();
     return *this = bind( null_object );
   }
 
