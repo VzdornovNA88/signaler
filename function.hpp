@@ -32,147 +32,9 @@
 #ifndef _FUNCTION_
 #define _FUNCTION_
 
+#include "detail/storage.hpp"
+
 namespace signals {
-
-
-// template< typename R, typename ...A >
-struct storage_t final {
-
-  using deleter_t     = void (*)( void* );
-  using ref_counter_t = size_t;
-
-  void* store = nullptr;
-
-
-static auto get_ref_counter( void* _store ) {
-
-    return static_cast<ref_counter_t*> ( _store );
-  }
-
-  static auto get_deleter( void* _store ) {
-
-    return static_cast<deleter_t*>     (
-           static_cast<void*>          ( 
-           static_cast<ref_counter_t*> ( _store ) + 1) );
-  }
-
-  template < typename T >
-  static auto get_store( void* _store ) {
-
-    return static_cast< T* >           (
-           static_cast<void*>          (
-           static_cast<deleter_t*>     (
-           static_cast<void*>          ( 
-           static_cast<ref_counter_t*> ( _store ) + 1) ) + 1) );
-  }
-
-  template < typename T >
-  static void deleter( void* _store ) {
-
-    get_ref_counter( _store )->~ref_counter_t();
-    get_store<T>   ( _store )->~T();
-          
-    operator delete (_store);
-    _store = nullptr;
-  }
-  
-  void destructor() {
-
-    if( store == nullptr ) return;
-
-    ref_counter_t ref_cnt = *get_ref_counter( store );
-
-    if( ref_cnt == 0 ) {
-
-      (*get_deleter( store ))( store );
-    }
-    else {
-
-      --ref_cnt;
-      store = nullptr;
-    }
-  }
-
-
-  storage_t() = default;
-  ~storage_t() { destructor(); }
-
-  /// copy constructor
-storage_t( storage_t const& s ) {
-
-    destructor();
-
-    store = s.store;
-
-    if( store != nullptr )
-      ++(*get_ref_counter( store ));
-}
-
-
-/// move constructor
-storage_t( storage_t&& s ) {
-
-    destructor();
-
-    store   = s.store;
-    s.store = nullptr;
-  }
-
-
-/// copy operator
-  storage_t& operator = ( storage_t const& s ) {
-
-    destructor();
-
-    store = s.store;
-
-    if( store != nullptr )
-      ++(*get_ref_counter( store ));
-
-    return *this;
-  }
-
-
-/// move operator
-  storage_t& operator = ( storage_t&& s ) {
-
-    destructor();
-
-    store   = s.store;
-    s.store = nullptr;
-
-    return *this;
-  }
-
-
-  template< typename T >
-  auto make( T&& f ) {
-
-    using functor_t = typename std::decay<T>::type;
-
-    destructor();
-
-    store = operator new( sizeof( ref_counter_t ) + 
-                          sizeof( deleter_t )     +
-                          sizeof( functor_t )     );
-
-    new ( get_ref_counter( store ) ) ref_counter_t( 0 );
-
-    auto del = static_cast<void*>(get_deleter( store ));
-    new ( del ) deleter_t( deleter< functor_t > );
-
-    auto functor = static_cast<void*>(get_store<functor_t>( store ));
-    new ( functor ) functor_t( std::forward<T>(f) );
-
-    return functor;
-  }
-
-  bool isInvalid() const {
-    return store == nullptr;
-  }
-
-};
-
 
 template < typename T > class function_t;
 
@@ -180,21 +42,17 @@ template< typename R, typename ...A >
 class function_t< R (A...) > final {
 
   using wraper_t = R (*)( void*, A&&... );
-  // using deleter_t     = void (*)( void* );
-  // using ref_counter_t = size_t;
 
 
-  /// Function content
-  void*      object  = nullptr;
-  wraper_t   wraper  = nullptr;
-  storage_t  store   ;
+  void*              functor = nullptr;
+  wraper_t           aplly   = nullptr;
+  detail::storage_t  store   = nullptr;
 
 
   function_t( void* const o, wraper_t const m ) : 
-  object(o),wraper(m) {}
+  functor(o),aplly(m) {}
 
 
-  /// Private type traits
   template < typename T >
   using pair = std::pair< T* const, R (T::* const)(A...) >;
   template < typename T >
@@ -211,37 +69,36 @@ class function_t< R (A...) > final {
   struct is_const_pair< std::pair<T const* const,R (T::* const)(A...) const> > : std::true_type {};
 
 
-  /// Wrapers
   template < R (*f)(A...) >
-  static R f_wraper( void* const, A&&... args ) {
+  static R _aplly( void* const, A&&... args ) {
 
     return f( std::forward<A>(args)... );
   }
 
   template < typename T, R (T::*m)(A...) >
-  static R f_wraper( void* const o, A&&... args ) {
+  static R _aplly( void* const o, A&&... args ) {
 
     return (static_cast<T*>(o)->*m)( std::forward<A>(args)... );
   }
 
   template < typename T, R (T::*m)(A...) const >
-  static R f_wraper(void* const o, A&&... args) {
+  static R _aplly(void* const o, A&&... args) {
 
     return (static_cast<T const*>(o)->*m)( std::forward<A>(args)... );
   }
 
   template <typename T>
   static typename std::enable_if< !(is_pair<T>::value || 
-                                    is_const_pair<T>::value), R >::type
-  f_wraper(void* const o, A&&... args) {
+                                    is_const_pair<T>::value), R >::
+  type _aplly(void* const o, A&&... args) {
 
     return (*static_cast<T*>(o))(std::forward<A>(args)...);
   }
 
   template <typename T>
   static typename std::enable_if< is_pair<T>::value ||                  
-                                  is_const_pair<T>::value, R >::type
-  f_wraper(void* const _o, A&&... args) {
+                                  is_const_pair<T>::value, R >::
+  type _aplly(void* const _o, A&&... args) {
 
     auto o = static_cast<T*>(_o)->first;
     auto m = static_cast<T*>(_o)->second;
@@ -249,81 +106,24 @@ class function_t< R (A...) > final {
     return (o->*m)( std::forward<A>(args)... );
   }
 
-  static R f_wraper(void* const o, A&&... args) {
+  static R _aplly(void* const o, A&&... args) {
 
     return (*reinterpret_cast<R(*)(A...)>(o))(std::forward<A>(args)...);
   }
 
-
-/// helpers
-  // static auto get_ref_counter( void* _store ) {
-
-  //   return static_cast<ref_counter_t*> ( _store );
-  // }
-
-  // static auto get_deleter( void* _store ) {
-
-  //   return static_cast<deleter_t*>     (
-  //          static_cast<void*>          ( 
-  //          static_cast<ref_counter_t*> ( _store ) + 1) );
-  // }
-
-  // template < typename T >
-  // static auto get_store( void* _store ) {
-
-  //   return static_cast< T* >           (
-  //          static_cast<void*>          (
-  //          static_cast<deleter_t*>     (
-  //          static_cast<void*>          ( 
-  //          static_cast<ref_counter_t*> ( _store ) + 1) ) + 1) );
-  // }
-
-  // template < typename T >
-  // static void deleter( void* _store ) {
-
-  //   get_ref_counter( _store )->~ref_counter_t();
-  //   get_store<T>   ( _store )->~T();
-          
-  //   operator delete (_store);
-  //   _store = nullptr;
-  // }
-  
-  // void destructor() {
-
-  //   if( store == nullptr ) return;
-
-  //   ref_counter_t ref_cnt = *get_ref_counter( store );
-
-  //   if( ref_cnt == 0 ) {
-
-  //     (*get_deleter( store ))( store );
-  //   }
-  //   else {
-
-  //     --ref_cnt;
-  //     store = nullptr;
-  //   }
-  // }
-
 public:
 
-
-/// destructor
-  // ~function_t() { destructor(); }
-
-
-/// constructors
   function_t() = default;
 
   function_t( std::nullptr_t const ) : function_t() {}
 
   template < typename T, 
   typename = typename std::enable_if< std::is_class<T>::value >::type >
-  explicit function_t( T const* const o ) : object( const_cast<T*>(o) ) {}
+  explicit function_t( T const* const o ) : functor( const_cast<T*>(o) ) {}
 
   template < typename T, 
   typename = typename std::enable_if< std::is_class<T>::value >::type >
-  explicit function_t( T const& o ) : object( const_cast<T*>(&o) ) {}
+  explicit function_t( T const& o ) : functor( const_cast<T*>(&o) ) {}
 
   template < typename T >
   function_t( T* const o, R (T::* const m)(A...) ) {
@@ -353,23 +153,12 @@ public:
              typename = typename ::std::enable_if<
              !::std::is_same<function_t,typename ::std::decay<T>::type>::value &&
              !::std::is_function<T>::value >::type  >
-  function_t(T&& f) /*: 
-  store( operator new(  sizeof( ref_counter_t )                + 
-                        sizeof( deleter_t )                    +
-                        sizeof( typename std::decay<T>::type ) ) )*/ {
+  function_t(T&& f) {
 
     using functor_t = typename std::decay<T>::type;
 
-    // new ( get_ref_counter( store ) ) ref_counter_t( 0 );
-
-    // auto del = static_cast<void*>(get_deleter( store ));
-    // new ( del ) deleter_t( deleter< functor_t > );
-
-    // auto functor = static_cast<void*>(get_store<functor_t>( store ));
-    // new ( functor ) functor_t( std::forward<T>(f) );
-
-    object = store.make< T >( std::forward<T>(f) );
-    wraper = f_wraper< functor_t >;
+    functor = store.make< T >( std::forward<T>(f) );
+    aplly   = _aplly< functor_t >;
   }
 
   template < typename T,
@@ -378,84 +167,65 @@ public:
               ::std::is_function<T>::value >::type  >
   function_t(T* f) {
 
-    object = reinterpret_cast< void* >( f );
-    wraper = f_wraper;
+    functor = reinterpret_cast< void* >( f );
+    aplly   = _aplly;
   }
 
 
-/// copy constructor
 function_t( function_t const& f ) {
 
-    // destructor();
-
-    object = f.object;
-    wraper = f.wraper;
-    store  = f.store;
-
-    // if( store != nullptr )
-    //   ++(*get_ref_counter( store ));
+    functor = f.functor;
+    aplly   = f.aplly;
+    store   = f.store;
   }
 
 
-/// move constructor
 function_t( function_t&& f ) {
 
-    // destructor();
+    functor = f.functor;
+    aplly   = f.aplly;
+    store   = f.store;
 
-    object = f.object;
-    wraper = f.wraper;
-    store  = f.store;
-
-    f.object = nullptr;
-    f.wraper = nullptr;
-    f.store.destructor();
+    f.functor = nullptr;
+    f.aplly   = nullptr;
+    f.store   = nullptr;
   }
 
 
-/// copy operator
   function_t& operator = ( function_t const& f ) {
 
-    // destructor();
-
-    object = f.object;
-    wraper = f.wraper;
-    store  = f.store;
-
-    // if( store != nullptr )
-    //   ++(*get_ref_counter( store ));
+    functor = f.functor;
+    aplly   = f.aplly;
+    store   = f.store;
 
     return *this;
   }
 
 
-/// move operator
   function_t& operator = ( function_t&& f ) {
 
-    // destructor();
+    functor = f.functor;
+    aplly   = f.aplly;
+    store   = f.store;
 
-    object = f.object;
-    wraper = f.wraper;
-    store  = f.store;
-
-    f.object = nullptr;
-    f.wraper = nullptr;
-    f.store.destructor();
+    f.functor = nullptr;
+    f.aplly   = nullptr;
+    f.store   = nullptr;
 
     return *this;
   }
 
 
-/// assignment operators
   template < typename T >
   function_t& operator = ( R (T::* const m)(A...) ) {
 
-    return *this = bind( static_cast<T*>(object), m );
+    return *this = bind( static_cast<T*>(functor), m );
   }
 
   template < typename T >
   function_t& operator=( R (T::* const m)(A...) const ) {
 
-    return *this = bind( static_cast<T const*>(object), m );
+    return *this = bind( static_cast<T const*>(functor), m );
   }
 
   template < typename T,
@@ -466,22 +236,8 @@ function_t( function_t&& f ) {
 
     using functor_t = typename std::decay<T>::type;
 
-    // destructor();
-
-    // store = operator new( sizeof( ref_counter_t ) + 
-    //                       sizeof( deleter_t )     +
-    //                       sizeof( functor_t )     );
-
-    // new ( get_ref_counter( store ) ) ref_counter_t( 0 );
-
-    // auto del = static_cast<void*>(get_deleter( store ));
-    // new ( del ) deleter_t( deleter< functor_t > );
-
-    // auto functor = static_cast<void*>(get_store<functor_t>( store ));
-    // new ( functor ) functor_t( std::forward<T>(f) );
-
-    object = store.make< T >( std::forward<T>(f) );
-    wraper = f_wraper< functor_t >;
+    functor = store.make< T >( std::forward<T>(f) );
+    aplly   = _aplly< functor_t >;
 
     return *this;
   }
@@ -492,57 +248,52 @@ function_t( function_t&& f ) {
               ::std::is_function<T>::value >::type >
   function_t& operator = ( T* f ) {
 
-    // destructor();
-
-    object = reinterpret_cast< void* >( f );
-    wraper = f_wraper;
-    store.destructor();
+    functor = reinterpret_cast< void* >( f );
+    aplly   = _aplly;
+    store   = nullptr;
 
     return *this;
   }
 
   function_t& operator = ( std::nullptr_t const null_object ) {
 
-    // destructor();
     return *this = bind( null_object );
   }
 
   function_t& operator = ( int const null_object ) {
 
-    // destructor();
     return *this = bind( null_object );
   }
 
 
-/// binders
   template < R (* const f)(A...) >
   static function_t bind() {
 
-    return { nullptr, f_wraper<f> };
+    return { nullptr, _aplly<f> };
   }
 
   template < typename T, R (T::* const m)(A...) >
   static function_t bind( T* const o ) {
 
-    return { o, f_wraper<T, m> };
+    return { o, _aplly<T, m> };
   }
 
   template < typename T, R (T::* const m)(A...) const >
   static function_t bind( T const* const o ) {
 
-    return { const_cast<T*>(o), f_wraper<T, m> };
+    return { const_cast<T*>(o), _aplly<T, m> };
   }
 
   template < typename T, R (T::* const m)(A...) >
   static function_t bind( T& o ) {
 
-    return { &o, f_wraper<T, m> };
+    return { &o, _aplly<T, m> };
   }
 
   template < typename T, R (T::* const m)(A...) const >
   static function_t bind( T const& o ) {
 
-    return { const_cast<T*>(&o), f_wraper<T, m> };
+    return { const_cast<T*>(&o), _aplly<T, m> };
   }
 
   template < typename T >
@@ -591,17 +342,15 @@ function_t( function_t&& f ) {
   }
 
 
-/// swap 
   void swap( function_t& other ) { 
 
     std::swap( *this, other ); 
   }
 
 
-/// comparison operators
   bool operator==( function_t const& r ) const {
 
-    return (object == r.object) && (wraper == r.wraper);
+    return (functor == r.functor) && (aplly == r.aplly);
   }
 
   bool operator!=( function_t const& r ) const {
@@ -611,31 +360,29 @@ function_t( function_t&& f ) {
 
   bool operator<( function_t const& r ) const {
 
-    return (object < r.object) || ((object == r.object) && (wraper < r.wraper));
+    return (functor < r.functor) || ((functor == r.functor) && (aplly < r.aplly));
   }
 
   bool operator==( std::nullptr_t const ) const {
 
-    return !wraper;
+    return !aplly;
   }
 
   bool operator!=( std::nullptr_t const ) const {
 
-    return wraper;
+    return aplly;
   }
 
 
-/// conversion to bool
   explicit operator bool() const { 
 
-    return wraper; 
+    return aplly; 
   }
 
 
-/// callable
   R operator()( A... args ) const {
 
-    return wraper( object, std::forward<A>(args)... );
+    return aplly( functor, std::forward<A>(args)... );
   }
 };
 
