@@ -32,7 +32,7 @@
 #ifndef _SIGNAL_
 #define _SIGNAL_
 
-#include "function.hpp"
+#include "function/function.hpp"
 #include <set>
 
 namespace signals {

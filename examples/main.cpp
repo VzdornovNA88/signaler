@@ -1,8 +1,8 @@
 #include <iostream>
-#include "../function.hpp"
+#include "../src/function/function.hpp"
 #include <functional>
 
-#include "../signal.hpp"
+#include "../src/signal.hpp"
 
 using namespace signals;
 
