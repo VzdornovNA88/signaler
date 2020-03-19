@@ -35,7 +35,7 @@
 #include "detail/storage.hpp"
 #include "detail/type_traits.hpp"
 
-namespace signals {
+namespace signaler {
 
 template < typename T > class function_t;
 

@@ -4,7 +4,7 @@
 
 #include "../src/signal.hpp"
 
-using namespace signals;
+using namespace signaler;
 
 struct A
 {

@@ -32,7 +32,7 @@
 #ifndef _STORAGE_
 #define _STORAGE_
 
-namespace signals {
+namespace signaler {
 namespace detail  {
 
 class storage_t final {

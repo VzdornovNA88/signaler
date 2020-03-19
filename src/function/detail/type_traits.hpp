@@ -32,7 +32,7 @@
 #ifndef _TYPE_TRAITS_
 #define _TYPE_TRAITS_
 
-namespace signals {
+namespace signaler {
 namespace detail  {
 
 template <typename,typename,typename = void>

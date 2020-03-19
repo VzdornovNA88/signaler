@@ -35,7 +35,7 @@
 #include "function/function.hpp"
 #include <set>
 
-namespace signals {
+namespace signaler {
 
 template <typename... A>
 class signal_t final {
