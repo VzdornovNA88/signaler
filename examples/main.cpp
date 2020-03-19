@@ -75,7 +75,7 @@ std::cout << "size dx: " << sizeof(dx) << std::endl;
 
 std::cout << "1" << std::endl;
 
-dx = []{};
+dx = [](){}; 
 
 std::cout << "2" << std::endl;
 
