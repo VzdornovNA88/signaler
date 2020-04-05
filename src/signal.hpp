@@ -33,81 +33,272 @@
 #define _SIGNAL_
 
 #include "function/function.hpp"
-#include <set>
+//#include <set>
+#include <vector>
+//#include <unordered_set>
+#include <algorithm>
+
 
 namespace signaler {
 
-template <typename... A>
-class signal_t final {
+//template <typename... A>
+//class signal_t final {
+//
+//	struct FunctionHasher
+//	{
+//		size_t
+//			operator()(const function_t<void(A...)> & obj) const
+//		{
+//			return std::hash<size_t>()(obj.hash_code());
+//		}
+//	};
+//
+//	// Custom comparator that compares the string objects by length
+//	struct FunctionComparator
+//	{
+//		bool
+//			operator()(const function_t<void(A...)> & obj1, const function_t<void(A...)> & obj2) const
+//		{
+//			if (obj1 == obj2)
+//				return true;
+//			return false;
+//		}
+//	};
+//
+//  using slot_t = function_t<void(A...)>;
+//  mutable std::unordered_set<slot_t, FunctionHasher, FunctionComparator> slots;
+//
+// public:
+//
+//  signal_t() {}
+//
+//  signal_t( signal_t const& other ) {
+//    
+//    slots = other.slots;
+//  }
+//
+//  signal_t& operator = (signal_t const& other) {
+//
+//    disconnect();
+//    slots = other.slots;
+//    return *this;
+//  }
+//  
+//  template <typename T>
+// // [[deprecated("Memory allocation in heap for storing the function ! size allocation = ( 2*size_t + sizeof( T ) )")]]
+//  void connect( T *o, void (T::*m)(A...) ) const {
+//
+//    slots.emplace( o,m ).first;
+//  }
+//
+//  template <typename T>
+//  	void disconnect(T* o, void (T::*m)(A...)) const {
+//
+//  		slots.erase(function_t<void(A...)>(o, m));
+//  	}
+//
+//
+//  template <typename T>
+//  //[[deprecated("Memory allocation in heap for storing the function ! size allocation = ( 2*size_t + sizeof( T ) )")]]
+//  void connect( T *o, void (T::*m)(A...) const ) const {
+//
+//    slots.emplace( o,m )
+//  }
+//
+//  template <typename T>
+//  void disconnect(T* o, void (T::*m)(A...) const ) const {
+//
+//	slots.erase(function_t<void(A...)>(o, m));
+//  }
+//
+//
+//  template <typename T, void (T::*m)(A...)>
+//  void connect( T *o ) const {
+//
+//    slots.insert( function_t<void (A...)>::template bind<T, m>( o ) );
+//  }
+//
+//  template <typename T, void (T::*m)(A...)>
+//  void disconnect(T* o) const {
+//
+//	slots.erase(function_t<void(A...)>::bind<T, m>(o));
+//  }
+//
+//
+//  template <typename T, void (T::*m)(A...) const>
+//  void connect( T *o ) const {
+//
+//    slots.insert( function_t<void (A...)>::template bind<T, m>( o ) );
+//  }
+//
+//  template <typename T, void (T::*m)(A...) const>
+//  void disconnect(T* o) const {
+//
+//	slots.erase(function_t<void(A...)>::bind<T, m>(o));
+//  }
+//
+//
+//  void connect( slot_t const& slot ) const {
+//
+//    slots.emplace( slot ).first;
+//  }
+//
+//  	void disconnect(slot_t const& _disconnect_slot) const {
+//
+//			slots.erase(_disconnect_slot);
+//		}
+//
+//
+//		void connect(signal_t& signal) const {
+//			connect(&signal, &signal_t::operator());
+//		}
+//
+//		void disconnect(signal_t& _disconnect_slot) const {
+//
+//			disconnect(&signal, &signal_t::operator());
+//		}
+//
+//
+//  void disconnect() const {
+//
+//    slots.clear();
+//  }
+//
+//  void operator()( A... p ) const {
+//
+//    for(const auto& slot : slots)
+//      slot(std::forward<A>(p)...);
+//  }
+//};
 
-  using slot_t = function_t<void(A...)>;
-  mutable std::set<slot_t> slots;
+	template <typename... A>
+	class signal_t final {
 
- public:
+		using slot_t = function_t<void(A...)>;
+		mutable std::vector<slot_t> slots;
 
-  using connection_id_t = typename std::set<slot_t>::const_iterator;
+	public:
 
-  signal_t() {}
+		signal_t() = default; /*{ slots.reserve(2048); }*/
 
-  signal_t( signal_t const& other ) {
-    
-    slots = other.slots;
-  }
+		signal_t(signal_t const& other) {
 
-  signal_t& operator = (signal_t const& other) {
+			slots = other.slots;
+		}
 
-    disconnect();
-    slots = other.slots;
-    return *this;
-  }
-  
-  template <typename T>
-  [[deprecated("Memory allocation in heap for storing the function ! size allocation = ( 2*size_t + sizeof( T ) )")]]
-  auto connect( T *o, void (T::*m)(A...) ) const {
+		signal_t& operator = (signal_t const& other) {
 
-    return slots.emplace( o,m ).first;
-  }
+			disconnect();
+			slots = other.slots;
+			return *this;
+		}
 
-  template <typename T>
-  [[deprecated("Memory allocation in heap for storing the function ! size allocation = ( 2*size_t + sizeof( T ) )")]]
-  auto connect( T *o, void (T::*m)(A...) const ) const {
+		template <typename T>
+		//[[deprecated("Memory allocation in heap for storing the function ! size allocation = ( 2*size_t + sizeof( T ) )")]]
+		void connect(T* o, void (T::*m)(A...)) const {
 
-    return slots.emplace( o,m ).first;
-  }
+			return slots.emplace_back(o, m);
+		}
 
-  template <typename T, void (T::*m)(A...)>
-  auto connect( T *o ) const {
+		template <typename T>
+		void disconnect(T* o, void (T::*m)(A...)) const {
 
-    return slots.insert( function_t<void (A...)>::template bind<T, m>( o ) );
-  }
+			function_t<void(A...)> _disconnect_slot(o, m);
+			
+			slots.erase( std::find_if(slots.begin(), slots.end(), [&_disconnect_slot](auto _slot) {
+				return _slot == _disconnect_slot;
+			}));
+		}
 
-  template <typename T, void (T::*m)(A...) const>
-  auto connect( T *o ) const {
 
-    return slots.insert( function_t<void (A...)>::template bind<T, m>( o ) );
-  }
+		template <typename T>
+		//[[deprecated("Memory allocation in heap for storing the function ! size allocation = ( 2*size_t + sizeof( T ) )")]]
+		void connect(T* o, void (T::*m)(A...) const) const {
 
-  auto connect( slot_t const& slot ) const {
+			return slots.emplace_back(o, m);
+		}
 
-    return slots.emplace( slot ).first;
-  }
+		template <typename T>
+		void disconnect(T* o, void (T::*m)(A...) const) const {
 
-  void disconnect( connection_id_t id ) const {
+			function_t<void(A...)> _disconnect_slot(o, m);
 
-    slots.erase( id );
-  }
+			slots.erase(std::find_if(slots.begin(), slots.end(), [&_disconnect_slot](auto _slot) {
+				return _slot == _disconnect_slot;
+			}));
+		}
 
-  void disconnect() const {
 
-    slots.clear();
-  }
+		template <typename T, void (T::*m)(A...)>
+		void connect(T* o) const {
 
-  void operator()( A... p ) const {
+			return slots.push_back(function_t<void(A...)>::template bind<T, m>(o));
+		}
 
-    for(const auto& slot : slots)
-      slot(std::forward<A>(p)...);
-  }
-};
+		template <typename T, void (T::*m)(A...)>
+		void disconnect(T* o) const {
+
+			auto _disconnect_slot = function_t<void(A...)>::bind<T, m>(o);
+
+			slots.erase(std::find_if(slots.begin(), slots.end(), [&_disconnect_slot](auto _slot) {
+				return _slot == _disconnect_slot;
+			}));
+		}
+
+
+		template <typename T, void (T::*m)(A...) const>
+		void connect(T* o) const {
+
+			return slots.push_back(function_t<void(A...)>::template bind<T, m>(o));
+		}
+
+		template <typename T, void (T::*m)(A...) const>
+		void disconnect(T* o) const {
+
+			auto _disconnect_slot = function_t<void(A...)>::bind<T, m>(o);
+
+			slots.erase(std::find_if(slots.begin(), slots.end(), [&_disconnect_slot](auto _slot) {
+				return _slot == _disconnect_slot;
+			}));
+		}
+
+
+		void connect(slot_t const& slot) const {
+			return slots.emplace_back(slot);
+		}
+
+		void disconnect(slot_t const& _disconnect_slot) const {
+
+			slots.erase(std::find_if(slots.begin(), slots.end(), [&_disconnect_slot](auto _slot) {
+				_slot == _disconnect_slot;
+			}));
+		}
+
+
+		void connect(signal_t& signal) const {
+			return connect(&signal, &signal_t::operator());
+		}
+
+		void disconnect(signal_t& _disconnect_slot) const {
+
+			slots.erase(std::find_if(slots.begin(), slots.end(), [&_disconnect_slot](auto _slot) {
+				_slot == _disconnect_slot;
+			}));
+		}
+
+
+		void disconnect() const {
+
+			slots.clear();
+		}
+
+		void operator()(A... p) const {
+
+			for (const auto& slot : slots) {
+				slot(std::forward<A>(p)...);
+			}
+		}
+	};
 
 }
 

@@ -32,6 +32,8 @@
 #ifndef _FUNCTION_
 #define _FUNCTION_
 
+#include <utility>
+
 #include "detail/storage.hpp"
 #include "detail/type_traits.hpp"
 
@@ -55,14 +57,14 @@ class function_t< R (A...) > final {
 
 
   template < typename T >
-  using pair = std::pair< T* const, R (T::* const)(A...) >;
+  using functor_pair = std::pair< T* const, R (T::* const)(A...) >;
   template < typename T >
-  using const_pair = std::pair< T const* const, R (T::* const)(A...) const >;
+  using const_functor_pair = std::pair< T const* const, R (T::* const)(A...) const >;
 
   template <typename>
-  struct is_pair : std::false_type {};
+  struct is_functor_pair : std::false_type {};
   template <typename T>
-  struct is_pair< std::pair< T* const,R (T::* const)(A...)> > : std::true_type {};
+  struct is_functor_pair< std::pair< T* const,R (T::* const)(A...)> > : std::true_type {};
 
   template <typename>
   struct is_const_pair : std::false_type { };
@@ -89,7 +91,7 @@ class function_t< R (A...) > final {
   }
 
   template <typename T>
-  static typename std::enable_if< !(is_pair<T>::value || 
+  static typename std::enable_if< !(is_functor_pair<T>::value || 
                                     is_const_pair<T>::value), R >::
   type _aplly(void* const o, A&&... args) {
 
@@ -97,7 +99,7 @@ class function_t< R (A...) > final {
   }
 
   template <typename T>
-  static typename std::enable_if< is_pair<T>::value ||                  
+  static typename std::enable_if< is_functor_pair<T>::value ||                  
                                   is_const_pair<T>::value, R >::
   type _aplly(void* const _o, A&&... args) {
 
@@ -338,25 +340,25 @@ function_t( function_t&& f ) {
   template < typename T >
   static function_t bind( T* const o, R (T::* const m)(A...) ) {
 
-    return pair<T>( o, m );
+    return functor_pair<T>( o, m );
   }
 
   template < typename T >
   static function_t bind( T const* const o, R (T::* const m)(A...)const ) {
 
-    return const_pair<T>( o, m );
+    return const_functor_pair<T>( o, m );
   }
 
   template < typename T >
   static function_t bind( T& o, R (T::* const m)(A...) ) {
 
-    return pair<T>( &o, m );
+    return functor_pair<T>( &o, m );
   }
 
   template < typename T >
   static function_t bind( T const& o, R (T::* const m)(A...) const ) {
 
-    return const_pair<T>( &o, m );
+    return const_functor_pair<T>( &o, m );
   }
 
   static function_t bind( std::nullptr_t const null_object ) {
@@ -405,6 +407,10 @@ function_t( function_t&& f ) {
   explicit operator bool() const { 
 
     return aplly; 
+  }
+
+  size_t hash_code() const {
+	  return reinterpret_cast<size_t>(functor);
   }
 
 

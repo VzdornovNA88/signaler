@@ -29,8 +29,10 @@
   ****************************************************************************** 
   */
 
-#ifndef _TYPE_TRAITS_
-#define _TYPE_TRAITS_
+#ifndef _TYPE_TRAITS_SIGNALER_
+#define _TYPE_TRAITS_SIGNALER_
+
+#include <type_traits>
 
 namespace signaler {
 namespace detail  {
@@ -46,16 +48,11 @@ typename std::enable_if< !::std::is_scalar<typename std::decay<Type>::type>::val
 	
   using _signature       = Ret(clazz::*)(Args...);
   using _signature_const = Ret(clazz::*)(Args...)const;
-  
+
   template< typename F >
-  using _get_signature_of       = decltype(static_cast<_signature>(&F::operator()));
+  using _is_invokable = std::is_same<decltype(static_cast<_signature>(&F::operator())),_signature>;
   template< typename F >
-  using _get_signature_const_of = decltype(static_cast<_signature_const>(&F::operator()));
-  
-  template< typename F >
-  using _is_invokable = std::is_same<_get_signature_of<F>,_signature>;
-  template< typename F >
-  using _is_invokable_const = std::is_same<_get_signature_const_of<F>,_signature_const>;
+  using _is_invokable_const = std::is_same<decltype(static_cast<_signature_const>(&F::operator())),_signature_const>;
 
   template <typename C,typename = void>
   struct _is_functor : std::false_type {};
@@ -77,4 +74,4 @@ public:
 }
 }
 
-#endif  //_TYPE_TRAITS_
+#endif  //_TYPE_TRAITS_SIGNALER_
