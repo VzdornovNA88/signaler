@@ -137,10 +137,10 @@ std::cout << "end" << std::endl;
   B object_b;
   signal_to_signal.connect( signal_int1 );
   signal_to_signal1.connect( signal_to_signal );
-  auto connection = signal_to_signal2.connect( signal_to_signal1 );
+  signal_to_signal2.connect( signal_to_signal1 );
   signal_to_signal2(1111111);
 
-  signal_to_signal2.disconnect( connection );
+  signal_to_signal2.disconnect( signal_to_signal1 );
   
   std::cout << "start copy signal" << std::endl;
   signal_int1 = signal_to_signal2;
