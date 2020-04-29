@@ -179,7 +179,7 @@ namespace signaler {
 	class signal_t final {
 
 		using slot_t = function_t<void(A...)>;
-		mutable std::vector<slot_t> slots;
+		std::vector<slot_t> slots;
 
 	public:
 
@@ -197,48 +197,14 @@ namespace signaler {
 			return *this;
 		}
 
-		template <typename T>
-		void connect(T* o, void (T::*m)(A...)) const {
-
-			return slots.emplace_back(o, m);
-		}
-
-		template <typename T>
-		void disconnect(T* o, void (T::*m)(A...)) const {
-
-			function_t<void(A...)> _disconnect_slot(o, m);
-			
-			slots.erase( std::find_if(slots.begin(), slots.end(), [&_disconnect_slot](auto _slot) {
-				return _slot == _disconnect_slot;
-			}));
-		}
-
-
-		template <typename T>
-		void connect(T* o, void (T::*m)(A...) const) const {
-
-			return slots.emplace_back(o, m);
-		}
-
-		template <typename T>
-		void disconnect(T* o, void (T::*m)(A...) const) const {
-
-			function_t<void(A...)> _disconnect_slot(o, m);
-
-			slots.erase(std::find_if(slots.begin(), slots.end(), [&_disconnect_slot](auto _slot) {
-				return _slot == _disconnect_slot;
-			}));
-		}
-
-
 		template <typename T, void (T::*m)(A...)>
-		void connect(T* o) const {
+		void connect(T* o) {
 
 			return slots.push_back(function_t<void(A...)>::template bind<T, m>(o));
 		}
 
 		template <typename T, void (T::*m)(A...)>
-		void disconnect(T* o) const {
+		void disconnect(T* o) {
 
 			auto _disconnect_slot = function_t<void(A...)>::template bind<T, m>(o);
 
@@ -249,13 +215,13 @@ namespace signaler {
 
 
 		template <typename T, void (T::*m)(A...) const>
-		void connect(T* o) const {
+		void connect(T* o) {
 
 			return slots.push_back(function_t<void(A...)>::template bind<T, m>(o));
 		}
 
 		template <typename T, void (T::*m)(A...) const>
-		void disconnect(T* o) const {
+		void disconnect(T* o) {
 
 			auto _disconnect_slot = function_t<void(A...)>::template bind<T, m>(o);
 
@@ -265,11 +231,11 @@ namespace signaler {
 		}
 
 
-		void connect(slot_t const& slot) const {
+		void connect(slot_t const& slot) {
 			return slots.emplace_back(slot);
 		}
 
-		void disconnect(slot_t const& _disconnect_slot) const {
+		void disconnect(slot_t const& _disconnect_slot) {
 
 			slots.erase(std::find_if(slots.begin(), slots.end(), [&_disconnect_slot](auto _slot) {
 				return _slot == _disconnect_slot;
@@ -277,11 +243,11 @@ namespace signaler {
 		}
 
 
-		void connect(signal_t& signal) const {
-			return connect(&signal, &signal_t::operator());
+		void connect(signal_t& signal) {
+			return connect<signal_t,&signal_t::operator()>(&signal);
 		}
 
-		void disconnect(signal_t& _disconnect_slot) const {
+		void disconnect(signal_t& _disconnect_slot) {
 
 			slots.erase(std::find_if(slots.begin(), slots.end(), [&_disconnect_slot](auto _slot) {
 				return _slot == _disconnect_slot;
@@ -289,7 +255,7 @@ namespace signaler {
 		}
 
 
-		void disconnect() const {
+		void disconnect() {
 
 			slots.clear();
 		}

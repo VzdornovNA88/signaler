@@ -54,12 +54,10 @@ int main(int argc, char* argv[])
   A a;
   auto d2(function_t<void (int)>::bind<A, &A::foo>(&a));
   auto d3(function_t<void (int)>{foo});
-  auto d4(function_t<void (int)>(&a, &A::foo));
 
   d1(1);
   d2(2);
   d3(3);
-  d4(4);
 
 {
   int b(2);
@@ -113,29 +111,15 @@ std::cout << "7" << std::endl;
 
   ::signal_t<int> signal_int;
 
-  signal_int.connect( &a, &A::foo );
+  signal_int.connect<A,&A::foo>( &a );
 
   signal_int(333);
-
-
-  ::signal_t<int> signal_int1;
-
-  signal_int1.connect( &a, &A::foo1 );
-
-  signal_int1(333);
-
-std::cout << "connect" << std::endl;
-  signal_int2.connect( foo );
-std::cout << "call" << std::endl;
-  signal_int2(333);
-std::cout << "end" << std::endl;
-  ::signal_t<int> signal_dummy;
 
   ::signal_t<int> signal_to_signal,signal_to_signal1,signal_to_signal2;
 
   
   B object_b;
-  signal_to_signal.connect( signal_int1 );
+  signal_to_signal.connect( signal_int );
   signal_to_signal1.connect( signal_to_signal );
   signal_to_signal2.connect( signal_to_signal1 );
   signal_to_signal2(1111111);
@@ -143,7 +127,7 @@ std::cout << "end" << std::endl;
   signal_to_signal2.disconnect( signal_to_signal1 );
   
   std::cout << "start copy signal" << std::endl;
-  signal_int1 = signal_to_signal2;
+  signal_int = signal_to_signal2;
   std::cout << "end copy signal" << std::endl;
 
   std::function< void (int) > std_func = foo;
@@ -158,13 +142,9 @@ std::cout << "end" << std::endl;
   }
 
 
-  std::cout << "d3 = " << sizeof( d3 ) << std::endl;
+  std::cout << "d1 = " << sizeof( d1 ) << std::endl;
   std::cout << "std_func = " << sizeof( std_func ) << std::endl;
   std::cout << "sizeof( signal_to_signal2 ) = " << sizeof( signal_to_signal2 ) << std::endl;
-  std::cout << "sizeof( signal_dummy ) = " << sizeof( signal_dummy ) << std::endl;
-  std::cout << "sizeof( signal_int ) = " << sizeof( signal_int ) << std::endl;
-  std::cout << "sizeof( signal_int1 ) = " << sizeof( signal_int1 ) << std::endl;
-  std::cout << "sizeof( signal_int2 ) = " << sizeof( signal_int2 ) << std::endl;
 
 
 

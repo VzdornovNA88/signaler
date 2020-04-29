@@ -51,26 +51,6 @@ class function_t< R (A...) > final {
   detail::storage_t  store   = nullptr;
 
 
-  function_t( void* const o, wraper_t const m ) : 
-  functor(o),aplly(m) {}
-
-
-  template < typename T >
-  using functor_pair = std::pair< T* const, R (T::* const)(A...) >;
-  template < typename T >
-  using const_functor_pair = std::pair< T const* const, R (T::* const)(A...) const >;
-
-  template <typename>
-  struct is_functor_pair : std::false_type {};
-  template <typename T>
-  struct is_functor_pair< std::pair< T* const,R (T::* const)(A...)> > : std::true_type {};
-
-  template <typename>
-  struct is_const_pair : std::false_type { };
-  template <typename T>
-  struct is_const_pair< std::pair<T const* const,R (T::* const)(A...) const> > : std::true_type {};
-
-
   template < R (*f)(A...) >
   static R _aplly( void* const, A&&... args ) {
 
@@ -90,54 +70,20 @@ class function_t< R (A...) > final {
   }
 
   template <typename T>
-  static typename std::enable_if< !(is_functor_pair<T>::value || 
-                                    is_const_pair<T>::value), R >::
-  type _aplly(void* const o, A&&... args) {
+  static typename std::enable_if< !(::std::is_function<T>::value), R >:: type _aplly(void* const o, A&&... args) {
 
     return (*static_cast<T*>(o))(std::forward<A>(args)...);
   }
 
-  template <typename T>
-  static typename std::enable_if< is_functor_pair<T>::value ||                  
-                                  is_const_pair<T>::value, R >::
-  type _aplly(void* const _o, A&&... args) {
 
-    auto o = static_cast<T*>(_o)->first;
-    auto m = static_cast<T*>(_o)->second;
-
-    return (o->*m)( std::forward<A>(args)... );
-  }
-
-
+  function_t( void* const o, wraper_t const m ) : 
+  functor(o),aplly(m) {}
+  
 public:
 
   function_t() = default;
 
   function_t( std::nullptr_t const ) : function_t() {}
-
-  template < typename T >
-  function_t( T* const o, R (T::* const m)(A...) ) {
-
-    *this = bind( o, m );
-  }
-
-  template < typename T >
-  function_t( T* const o, R (T::* const m)(A...) const ) {
-
-    *this = bind( o, m );
-  }
-
-  template < typename T >
-  function_t( T& o, R (T::* const m)(A...) ) {
-
-    *this = bind( o, m );
-  }
-
-  template < typename T >
-  function_t( T const& o, R (T::* const m)(A...) const ) {
-
-    *this = bind( o, m );
-  }
 
   template < typename T,
              typename = typename ::std::enable_if<
@@ -190,20 +136,6 @@ function_t( function_t&& f ) {
     f.aplly   = nullptr;
 
     return *this;
-  }
-
-
-  template < typename T >
-  function_t& operator = ( R (T::* const m)(A...) ) {
-
-    return *this = bind( static_cast<T*>(functor), m );
-  }
-
-
-  template < typename T >
-  function_t& operator=( R (T::* const m)(A...) const ) {
-
-    return *this = bind( static_cast<T const*>(functor), m );
   }
 
 
@@ -262,29 +194,6 @@ function_t( function_t&& f ) {
     return { const_cast<T*>(&o), _aplly<T, m> };
   }
 
-  template < typename T >
-  static function_t bind( T* const o, R (T::* const m)(A...) ) {
-
-    return functor_pair<T>( o, m );
-  }
-
-  template < typename T >
-  static function_t bind( T const* const o, R (T::* const m)(A...)const ) {
-
-    return const_functor_pair<T>( o, m );
-  }
-
-  template < typename T >
-  static function_t bind( T& o, R (T::* const m)(A...) ) {
-
-    return functor_pair<T>( &o, m );
-  }
-
-  template < typename T >
-  static function_t bind( T const& o, R (T::* const m)(A...) const ) {
-
-    return const_functor_pair<T>( &o, m );
-  }
 
   static function_t bind( std::nullptr_t const null_object ) {
 
