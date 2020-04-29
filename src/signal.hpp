@@ -179,91 +179,163 @@ namespace signaler {
 	class signal_t final {
 
 		using slot_t = function_t<void(A...)>;
-		std::vector<slot_t> slots;
+	public:
+		class connection_t {
+			slot_t _slot;
+		public:
+			connection_t(const slot_t& _s) :_slot(_s) {}
+			auto& slot() { return _slot; }
+		};
+
+	private: std::vector<connection_t*> connections;
 
 	public:
 
-		signal_t() { slots.reserve(8); }
+		signal_t() { connections.reserve(8); }
 
-		signal_t(signal_t const& other) {
+		signal_t( signal_t&& other ) {
 
-			slots = other.slots;
+			connections.swap( other.connections );
+			other.connections.clear();
 		}
 
-		signal_t& operator = (signal_t const& other) {
+		signal_t& operator = ( signal_t&& other ) {
 
 			disconnect();
-			slots = other.slots;
+			connections.swap(other.connections);
+			other.connections.clear();
 			return *this;
 		}
 
 		template <typename T, void (T::*m)(A...)>
-		void connect(T* o) {
+		connection_t* connect( T* o ) {
 
-			return slots.push_back(function_t<void(A...)>::template bind<T, m>(o));
+			auto _c = new connection_t(function_t<void(A...)>::template bind<T, m>(o));
+			connections.push_back(_c);
+			return _c;
 		}
 
 		template <typename T, void (T::*m)(A...)>
-		void disconnect(T* o) {
+		void disconnect( T* o ) {
 
 			auto _disconnect_slot = function_t<void(A...)>::template bind<T, m>(o);
 
-			slots.erase(std::find_if(slots.begin(), slots.end(), [&_disconnect_slot](auto _slot) {
-				return _slot == _disconnect_slot;
-			}));
+			auto it = std::find_if(connections.begin(), connections.end(), [&_disconnect_slot](auto _connection) {
+				return _connection->slot() == _disconnect_slot;
+			});
+
+			if (it != connections.end()) {
+				auto _c = *it;
+				connections.erase(it);
+				delete _c;
+			}
 		}
 
 
 		template <typename T, void (T::*m)(A...) const>
-		void connect(T* o) {
+		connection_t* connect( T* o ) {
 
-			return slots.push_back(function_t<void(A...)>::template bind<T, m>(o));
+			auto _c = new connection_t(function_t<void(A...)>::template bind<T, m>(o));
+			connections.push_back(_c);
+			return _c;
 		}
 
 		template <typename T, void (T::*m)(A...) const>
-		void disconnect(T* o) {
+		void disconnect( T* o ) {
 
 			auto _disconnect_slot = function_t<void(A...)>::template bind<T, m>(o);
 
-			slots.erase(std::find_if(slots.begin(), slots.end(), [&_disconnect_slot](auto _slot) {
-				return _slot == _disconnect_slot;
-			}));
+			auto it = std::find_if(connections.begin(), connections.end(), [&_disconnect_slot](auto _connection) {
+				return _connection->slot() == _disconnect_slot;
+			});
+
+			if (it != connections.end()) {
+				auto _c = *it;
+				connections.erase(it);
+				delete _c;
+			}
 		}
 
 
-		void connect(slot_t const& slot) {
-			return slots.emplace_back(slot);
+		template <void(*f)(A...)>
+		connection_t* connect() {
+
+			auto _c = new connection_t(function_t<void(A...)>::template bind<f>());
+			connections.push_back( _c );
+			return _c;
 		}
 
-		void disconnect(slot_t const& _disconnect_slot) {
+		template <void(*f)(A...)>
+		void disconnect() {
 
-			slots.erase(std::find_if(slots.begin(), slots.end(), [&_disconnect_slot](auto _slot) {
-				return _slot == _disconnect_slot;
-			}));
+			auto _disconnect_slot = function_t<void(A...)>::template bind<f>();
+
+			auto it = std::find_if(connections.begin(), connections.end(), [&_disconnect_slot](auto _connection) {
+				return _connection->slot() == _disconnect_slot;
+			});
+
+			if (it != connections.end()) {
+				auto _c = *it;
+				connections.erase(it);
+				delete _c;
+			}
 		}
 
 
-		void connect(signal_t& signal) {
+		connection_t* connect( slot_t const& slot ) {
+			
+			auto _c = new connection_t(slot);
+			connections.push_back(_c);
+			return _c;
+		}
+
+
+		connection_t* connect( signal_t& signal ) {
 			return connect<signal_t,&signal_t::operator()>(&signal);
 		}
 
-		void disconnect(signal_t& _disconnect_slot) {
+		void disconnect(signal_t& _disconnect_signal) {
 
-			slots.erase(std::find_if(slots.begin(), slots.end(), [&_disconnect_slot](auto _slot) {
-				return _slot == _disconnect_slot;
-			}));
+			auto _disconnect_slot = function_t<void(A...)>::template bind<signal_t, &signal_t::operator()>(&_disconnect_signal);
+
+			auto it = std::find_if(connections.begin(), connections.end(), [&_disconnect_slot](auto _connection) {
+				return _connection->slot() == _disconnect_slot;
+			});
+
+			if (it != connections.end()) {
+				auto _c = *it;
+				connections.erase(it);
+				delete _c;
+			}
+		}
+
+
+		void disconnect( connection_t* _c ) {
+
+			if (_c == nullptr) return;
+
+			auto it = std::find_if(connections.begin(), connections.end(), [_c](auto _connection) {
+				return _connection == _c;
+			});
+
+			if (it != connections.end()) {
+				auto _c = *it;
+				connections.erase(it);
+				delete _c;
+			}
 		}
 
 
 		void disconnect() {
 
-			slots.clear();
+			for (auto _c : connections)
+				disconnect( _c );
 		}
 
 		void operator()(A... p) const {
 
-			for (const auto& slot : slots) {
-				slot(std::forward<A>(p)...);
+			for (auto connection : connections) {
+				(connection->slot())(std::forward<A>(p)...);
 			}
 		}
 	};

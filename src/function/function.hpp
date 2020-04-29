@@ -48,7 +48,7 @@ class function_t< R (A...) > final {
 
   void*              functor = nullptr;
   wraper_t           aplly   = nullptr;
-  detail::storage_t  store   = nullptr;
+  detail::storage_t  store   ;
 
 
   template < R (*f)(A...) >

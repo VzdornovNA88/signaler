@@ -103,7 +103,7 @@ std::cout << "7" << std::endl;
 
   // attach a slot
   signal.connect([](std::string arg1, int arg2)mutable {
-      std::cout << arg1 << " " << arg2 << std::endl;
+      //std::cout << arg1 << " " << arg2 << std::endl;
   });
 
   signal("The answer:", 42);
@@ -125,10 +125,18 @@ std::cout << "7" << std::endl;
   signal_to_signal2(1111111);
 
   signal_to_signal2.disconnect( signal_to_signal1 );
+
+  auto connection = signal_to_signal2.connect<foo>();
+  signal_to_signal2(66666666);
+  
   
   std::cout << "start copy signal" << std::endl;
-  signal_int = signal_to_signal2;
+  //signal_int = std::move(signal_to_signal2);
   std::cout << "end copy signal" << std::endl;
+
+  signal_to_signal2.disconnect(connection);
+
+  signal_int(88888888);
 
   std::function< void (int) > std_func = foo;
 
