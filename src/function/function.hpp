@@ -35,7 +35,6 @@
 #include <utility>
 
 #include "detail/storage.hpp"
-#include "detail/type_traits.hpp"
 
 namespace signaler {
 
@@ -109,10 +108,6 @@ class function_t< R (A...) > final {
     return (o->*m)( std::forward<A>(args)... );
   }
 
-  static R _aplly(void* const o, A&&... args) {
-
-    return (*reinterpret_cast<R(*)(A...)>(o))(std::forward<A>(args)...);
-  }
 
 public:
 
@@ -146,40 +141,13 @@ public:
 
   template < typename T,
              typename = typename ::std::enable_if<
-             !::std::is_same<function_t,typename ::std::decay<T>::type>::value &&
-             !::std::is_function<T>::value                                     &&
-             !( ::std::is_empty<T>::value                                      && 
-                detail::is_functor<T,R(A...)>::value ) >::type  >
+             !::std::is_same<function_t,typename ::std::decay<T>::type>::value >::type  >
   function_t(T&& f) {
 
     using functor_t = typename std::decay<T>::type;
 
-    functor = store.make< T >( std::forward<T>(f) );
+    functor = store.init< T >( std::forward<T>(f) );
     aplly   = _aplly< functor_t >;
-  }
-
-  template < typename T,
-             typename = typename ::std::enable_if<
-             !::std::is_same<function_t,typename ::std::decay<T>::type>::value &&
-             ( ::std::is_function<T>::value                                    ||
-               ( ::std::is_empty<T>::value                                     && 
-                 detail::is_functor<T,R(A...)>::value ) ) >::type  >
-  function_t(T f) {
-
-    functor = reinterpret_cast< void* >( static_cast< R(*)(A...) >(f) );
-    aplly   = _aplly;
-  }
-
-  template < typename T,
-             typename = typename ::std::enable_if<
-             !::std::is_same<function_t,typename ::std::decay<T>::type>::value &&
-             ( ::std::is_function<T>::value                                    ||
-               ( ::std::is_empty<T>::value                                     && 
-                 detail::is_functor<T,R(A...)>::value ) ) >::type  >
-  function_t(T* f) {
-
-    functor = reinterpret_cast< void* >( static_cast< R(*)(A...) >(f) );
-    aplly   = _aplly;
   }
 
 
@@ -195,11 +163,10 @@ function_t( function_t&& f ) {
 
     functor = f.functor;
     aplly   = f.aplly;
-    store   = f.store;
+    store   = ::std::move( f.store );
 
     f.functor = nullptr;
     f.aplly   = nullptr;
-    f.store   = nullptr;
   }
 
 
@@ -217,11 +184,10 @@ function_t( function_t&& f ) {
 
     functor = f.functor;
     aplly   = f.aplly;
-    store   = f.store;
+    store   = ::std::move( f.store );
 
     f.functor = nullptr;
     f.aplly   = nullptr;
-    f.store   = nullptr;
 
     return *this;
   }
@@ -233,57 +199,27 @@ function_t( function_t&& f ) {
     return *this = bind( static_cast<T*>(functor), m );
   }
 
+
   template < typename T >
   function_t& operator=( R (T::* const m)(A...) const ) {
 
     return *this = bind( static_cast<T const*>(functor), m );
   }
 
+
   template < typename T,
              typename = typename ::std::enable_if<
-             !::std::is_same<function_t,typename ::std::decay<T>::type>::value &&
-             !::std::is_function<T>::value                                     &&
-             !( ::std::is_empty<T>::value                                      && 
-                detail::is_functor<T,R(A...)>::value ) >::type  >
+             !::std::is_same<function_t,typename ::std::decay<T>::type>::value  >::type >
   function_t& operator = ( T&& f ) {
 
     using functor_t = typename std::decay<T>::type;
 
-    functor = store.make< T >( std::forward<T>(f) );
+    functor = store.init< T >( std::forward<T>(f) );
     aplly   = _aplly< functor_t >;
 
     return *this;
   }
 
-  template < typename T,
-             typename = typename ::std::enable_if<
-             !::std::is_same<function_t,typename ::std::decay<T>::type>::value &&
-             ( ::std::is_function<T>::value                                    ||
-               ( ::std::is_empty<T>::value                                     && 
-                 detail::is_functor<T,R(A...)>::value ) ) >::type  >
-  function_t& operator = ( T f ) {
-
-    functor = reinterpret_cast< void* >( static_cast< R(*)(A...) >(f) );
-    aplly   = _aplly;
-    store   = nullptr;
-
-    return *this;
-  }
-
-  template < typename T,
-             typename = typename ::std::enable_if<
-             !::std::is_same<function_t,typename ::std::decay<T>::type>::value &&
-             ( ::std::is_function<T>::value                                    ||
-               ( ::std::is_empty<T>::value                                     && 
-                 detail::is_functor<T,R(A...)>::value ) ) >::type  >
-  function_t& operator = ( T* f ) {
-
-    functor = reinterpret_cast< void* >( static_cast< R(*)(A...) >(f) );
-    aplly   = _aplly;
-    store   = nullptr;
-
-    return *this;
-  }
 
   function_t& operator = ( std::nullptr_t const null_object ) {
 
@@ -324,17 +260,6 @@ function_t( function_t&& f ) {
   static function_t bind( T const& o ) {
 
     return { const_cast<T*>(&o), _aplly<T, m> };
-  }
-
-  template < typename T >
-  static function_t bind( T&& f ) {
-
-    return std::forward<T>( f );
-  }
-
-  static function_t bind( R (* const f)(A...) )  {
-
-    return f;
   }
 
   template < typename T >
@@ -407,10 +332,6 @@ function_t( function_t&& f ) {
   explicit operator bool() const { 
 
     return aplly; 
-  }
-
-  size_t hash_code() const {
-	  return reinterpret_cast<size_t>(functor);
   }
 
 

@@ -73,8 +73,6 @@ class storage_t final {
     operator delete (_store);
     _store = nullptr;
   }
-  
-public:
 
   void destructor() {
 
@@ -92,6 +90,8 @@ public:
       store = nullptr;
     }
   }
+  
+public:
 
   storage_t() = default;
   storage_t( std::nullptr_t const ) : storage_t() {}
@@ -150,7 +150,7 @@ public:
   }
 
   template< typename T >
-  auto make( T&& f ) {
+  auto init( T&& f ) {
 
     using functor_t = typename std::decay<T>::type;
 
@@ -169,10 +169,6 @@ public:
     new ( functor ) functor_t( std::forward<T>(f) );
 
     return functor;
-  }
-
-  operator void*() const {
-    return store;
   }
 };
 
