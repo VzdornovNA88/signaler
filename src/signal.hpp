@@ -173,23 +173,24 @@ namespace signaler {
 ///////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////
 
+    template <typename T>
+	class signal_t;
 
 
-	template <typename... A>
-	class signal_t final {
+	template < typename R, typename ...A >
+	class signal_t< R(A...) >  final {
+	public:
 
 		using slot_t = function_t<void(A...)>;
-	public:
+
 		class connection_t {
 			slot_t _slot;
+			//  R      _result;
 		public:
 			connection_t(const slot_t& _s) :_slot(_s) {}
-			auto& slot() { return _slot; }
+			friend class signal_t< R(A...) >;
 		};
 
-	private: std::vector<connection_t*> connections;
-
-	public:
 
 		signal_t() { connections.reserve(8); }
 
@@ -299,7 +300,7 @@ namespace signaler {
 			auto _disconnect_slot = function_t<void(A...)>::template bind<signal_t, &signal_t::operator()>(&_disconnect_signal);
 
 			auto it = std::find_if(connections.begin(), connections.end(), [&_disconnect_slot](auto _connection) {
-				return _connection->slot() == _disconnect_slot;
+				return _connection->_slot == _disconnect_slot;
 			});
 
 			if (it != connections.end()) {
@@ -332,12 +333,15 @@ namespace signaler {
 				disconnect( _c );
 		}
 
+
 		void operator()(A... p) const {
 
 			for (auto connection : connections) {
-				(connection->slot())(std::forward<A>(p)...);
+				connection->_slot(std::forward<A>(p)...);
 			}
 		}
+
+		private: std::vector<connection_t*> connections;
 	};
 
 }

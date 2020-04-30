@@ -44,7 +44,7 @@ struct B {
   }
 };
 
-::signal_t<int> signal_int2;
+::signal_t<void(int)> signal_int2;
 
 int main(int argc, char* argv[])
 {
@@ -99,7 +99,7 @@ if( dx_copy == nullptr )
 std::cout << "7" << std::endl;
 
 
-  signal_t<std::string, int> signal;
+  signal_t<void(std::string, int)> signal;
 
   // attach a slot
   signal.connect([](std::string arg1, int arg2)mutable {
@@ -109,13 +109,13 @@ std::cout << "7" << std::endl;
   signal("The answer:", 42);
 
 
-  ::signal_t<int> signal_int;
+  ::signal_t<void(int)> signal_int;
 
   signal_int.connect<A,&A::foo>( &a );
 
   signal_int(333);
 
-  ::signal_t<int> signal_to_signal,signal_to_signal1,signal_to_signal2;
+  ::signal_t<void(int)> signal_to_signal,signal_to_signal1,signal_to_signal2;
 
   
   B object_b;
@@ -141,7 +141,7 @@ std::cout << "7" << std::endl;
   std::function< void (int) > std_func = foo;
 
   {
-  ::signal_t<int> signal_int10;
+  ::signal_t<void(int)> signal_int10;
 
   signal_int10.connect<A,&A::foo1>( &a );
   signal_int10.connect<A,&A::foo> ( &a );
