@@ -1,8 +1,8 @@
 #include <iostream>
-#include "../src/function/function.hpp"
 #include <functional>
 
-#include "../src/signal.hpp"
+#include <function.hpp>
+#include <signal.hpp>
 
 using namespace signaler;
 
@@ -52,8 +52,13 @@ int main(int argc, char* argv[])
  
   std::cout << "A create start" << std::endl;
   A a;
-  auto d2(function_t<void (int)>::bind<A, &A::foo>(&a));
+  //auto d2(function_t<void (int)>::bind<A, &A::foo1>(&a));
+  auto d2(function_t<void(int)>::bind(&a, &A::foo1));
   auto d3(function_t<void (int)>{foo});
+  auto d7 = d3;
+
+  if( d3 == d7 )
+	  std::cout << "d3 == d7" << std::endl;
 
   d1(1);
   d2(2);
@@ -90,20 +95,18 @@ auto  dx_copy = dx;
 std::cout << "5" << std::endl;
 
 dx_copy();
-dx_copy = 0;
-
-if( dx_copy == nullptr ) 
+dx_copy = 61651615;
+if( dx_copy == 0 ) 
   std::cout << "6" << std::endl;
 }
 
 std::cout << "7" << std::endl;
 
-
   signal_t<void(std::string, int)> signal;
 
   // attach a slot
   signal.connect([](std::string arg1, int arg2)mutable {
-      //std::cout << arg1 << " " << arg2 << std::endl;
+      std::cout << arg1.c_str() << " " << arg2 << std::endl;
   });
 
   signal("The answer:", 42);

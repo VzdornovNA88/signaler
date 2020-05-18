@@ -4,7 +4,7 @@
   * @brief            Simple delegate pattern
   * @author           Nik A. Vzdornov (VzdornovNA88@yandex.ru)
   * @date             10.09.19
-  * @copyright 
+  * @copyright
   *
   * Copyright (c) 2019 VzdornovNA88
   *
@@ -26,229 +26,280 @@
   * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
   * SOFTWARE.
   *
-  ****************************************************************************** 
+  ******************************************************************************
   */
 
 #ifndef _FUNCTION_
 #define _FUNCTION_
 
 #include <utility>
+#include <type_traits>
 
 #include "detail/storage.hpp"
 
 namespace signaler {
 
-template < typename T > class function_t;
+	template < typename T > class function_t;
 
-template< typename R, typename ...A >
-class function_t< R (A...) > final {
+	template< typename R, typename ...A >
+	class function_t< R(A...) > final {
 
-  using wraper_t = R (*)( void*, A&&... );
+		using wraper_t = R(*)(void*, A&&...);
 
 
-  void*              functor = nullptr;
-  wraper_t           aplly   = nullptr;
-  detail::storage_t  store   ;
+		void*              functor = nullptr;
+		wraper_t           aplly = nullptr;
+		detail::storage_t  store;
 
 
-  template < R (*f)(A...) >
-  static R _aplly( void* const, A&&... args ) {
+		template < R(*f)(A...) >
+		static R _aplly(void* const, A&&... args) {
 
-    return f( std::forward<A>(args)... );
-  }
+			return f(std::forward<A>(args)...);
+		}
 
-  template < typename T, R (T::*m)(A...) >
-  static R _aplly( void* const o, A&&... args ) {
+		template < typename T, R(T::*m)(A...) >
+		static R _aplly(void* const o, A&&... args) {
 
-    return (static_cast<T*>(o)->*m)( std::forward<A>(args)... );
-  }
+			return (static_cast<T*>(o)->*m)(std::forward<A>(args)...);
+		}
 
-  template < typename T, R (T::*m)(A...) const >
-  static R _aplly(void* const o, A&&... args) {
+		template < typename T, R(T::*m)(A...) const >
+		static R _aplly(void* const o, A&&... args) {
 
-    return (static_cast<T const*>(o)->*m)( std::forward<A>(args)... );
-  }
+			return (static_cast<T const*>(o)->*m)(std::forward<A>(args)...);
+		}
 
-  template <typename T>
-  static typename std::enable_if< !(::std::is_function<T>::value), R >:: type _aplly(void* const o, A&&... args) {
+		template <typename T>
+		static R _aplly(void* const o, A&&... args) {
 
-    return (*static_cast<T*>(o))(std::forward<A>(args)...);
-  }
+			return (*static_cast<T*>(o))(std::forward<A>(args)...);
+		}
 
 
-  function_t( void* const o, wraper_t const m ) : 
-  functor(o),aplly(m) {}
-  
-public:
+		function_t(void* const o, wraper_t const m) :
+			functor(o), aplly(m) {}
 
-  function_t() = default;
+	public:
 
-  function_t( std::nullptr_t const ) : function_t() {}
+		function_t() = default;
 
-  template < typename T,
-             typename = typename ::std::enable_if<
-             !::std::is_same<function_t,typename ::std::decay<T>::type>::value >::type  >
-  function_t(T&& f) {
+		function_t(std::nullptr_t const) : function_t() {}
 
-    using functor_t = typename std::decay<T>::type;
+		template < typename T,
+			typename = typename ::std::enable_if<
+			!::std::is_same<function_t, typename ::std::decay<T>::type>::value >::type  >
+			function_t(T&& f) {
 
-    functor = store.init< T >( std::forward<T>(f) );
-    aplly   = _aplly< functor_t >;
-  }
+			using functor_t = typename std::decay<T>::type;
 
+			functor = store.init< T >(std::forward<T>(f));
+			aplly = _aplly< functor_t >;
+		}
 
-function_t( function_t const& f ) {
 
-    functor = f.functor;
-    aplly   = f.aplly;
-    store   = f.store;
-  }
+		template < typename T >
+		function_t(T* const o, R(T::* const m)(A...)) {
 
+			*this = bind(o, m);
+		}
 
-function_t( function_t&& f ) {
+		template < typename T >
+		function_t(T* const o, R(T::* const m)(A...) const) {
 
-    functor = f.functor;
-    aplly   = f.aplly;
-    store   = ::std::move( f.store );
+			*this = bind(o, m);
+		}
 
-    f.functor = nullptr;
-    f.aplly   = nullptr;
-  }
+		template < typename T >
+		function_t(T& o, R(T::* const m)(A...)) {
 
+			*this = bind(o, m);
+		}
 
-  function_t& operator = ( function_t const& f ) {
+		template < typename T >
+		function_t(T const& o, R(T::* const m)(A...) const) {
 
-    functor = f.functor;
-    aplly   = f.aplly;
-    store   = f.store;
+			*this = bind(o, m);
+		}
 
-    return *this;
-  }
 
+		function_t(function_t const& f) {
 
-  function_t& operator = ( function_t&& f ) {
+			functor = f.functor;
+			aplly = f.aplly;
+			store = f.store;
+		}
 
-    functor = f.functor;
-    aplly   = f.aplly;
-    store   = ::std::move( f.store );
 
-    f.functor = nullptr;
-    f.aplly   = nullptr;
+		function_t(function_t&& f) {
 
-    return *this;
-  }
+			functor = f.functor;
+			aplly = f.aplly;
+			store = ::std::move(f.store);
 
+			f.functor = nullptr;
+			f.aplly = nullptr;
+		}
 
-  template < typename T,
-             typename = typename ::std::enable_if<
-             !::std::is_same<function_t,typename ::std::decay<T>::type>::value  >::type >
-  function_t& operator = ( T&& f ) {
 
-    using functor_t = typename std::decay<T>::type;
+		function_t& operator = (function_t const& f) {
 
-    functor = store.init< T >( std::forward<T>(f) );
-    aplly   = _aplly< functor_t >;
+			functor = f.functor;
+			aplly = f.aplly;
+			store = f.store;
 
-    return *this;
-  }
+			return *this;
+		}
 
 
-  function_t& operator = ( std::nullptr_t const null_object ) {
+		function_t& operator = (function_t&& f) {
 
-    return *this = bind( null_object );
-  }
+			functor = f.functor;
+			aplly = f.aplly;
+			store = ::std::move(f.store);
 
-  function_t& operator = ( int const null_object ) {
+			f.functor = nullptr;
+			f.aplly = nullptr;
 
-    return *this = bind( null_object );
-  }
+			return *this;
+		}
 
 
-  template < R (* const f)(A...) >
-  static function_t bind() {
+		template < typename T,
+			typename = typename ::std::enable_if<
+			!::std::is_same<function_t, typename ::std::decay<T>::type>::value  >::type >
+			function_t& operator = (T&& f) {
 
-    return { nullptr, _aplly<f> };
-  }
+			using functor_t = typename std::decay<T>::type;
 
-  template < typename T, R (T::* const m)(A...) >
-  static function_t bind( T* const o ) {
+			functor = store.init< T >(std::forward<T>(f));
+			aplly = _aplly< functor_t >;
 
-    return { o, _aplly<T, m> };
-  }
+			return *this;
+		}
 
-  template < typename T, R (T::* const m)(A...) const >
-  static function_t bind( T const* const o ) {
 
-    return { const_cast<T*>(o), _aplly<T, m> };
-  }
+		function_t& operator = (std::nullptr_t const null_object) {
 
-  template < typename T, R (T::* const m)(A...) >
-  static function_t bind( T& o ) {
+			return *this = bind(null_object);
+		}
 
-    return { &o, _aplly<T, m> };
-  }
+		function_t& operator = (int const null_object) {
 
-  template < typename T, R (T::* const m)(A...) const >
-  static function_t bind( T const& o ) {
+			return *this = bind(null_object);
+		}
 
-    return { const_cast<T*>(&o), _aplly<T, m> };
-  }
 
+		template < R(*const f)(A...) >
+		static function_t bind() {
 
-  static function_t bind( std::nullptr_t const null_object ) {
+			return { nullptr, _aplly<f> };
+		}
 
-    return null_object;
-  }
+		template < typename T, R(T::* const m)(A...) >
+		static function_t bind(T* const o) {
 
-  static function_t bind( int const null_object ) {
+			return { o, _aplly<T, m> };
+		}
 
-    return nullptr;
-  }
+		template < typename T, R(T::* const m)(A...) const >
+		static function_t bind(T const* const o) {
 
+			return { const_cast<T*>(o), _aplly<T, m> };
+		}
 
-  void swap( function_t& other ) { 
+		template < typename T, R(T::* const m)(A...) >
+		static function_t bind(T& o) {
 
-    std::swap( *this, other ); 
-  }
+			return { &o, _aplly<T, m> };
+		}
 
+		template < typename T, R(T::* const m)(A...) const >
+		static function_t bind(T const& o) {
 
-  bool operator==( function_t const& r ) const {
+			return { const_cast<T*>(&o), _aplly<T, m> };
+		}
 
-    return (functor == r.functor) && (aplly == r.aplly);
-  }
 
-  bool operator!=( function_t const& r ) const {
+		template < typename T >
+		static function_t bind(T* const o, R(T::* const m)(A...)) {
 
-    return !operator==(r);
-  }
+			return [=](A&&... args) ->R { return (o->*m)(std::forward<A>(args)...); };
+		}
 
-  bool operator<( function_t const& r ) const {
+		template < typename T >
+		static function_t bind(T const* const o, R(T::* const m)(A...)const) {
 
-    return (functor < r.functor) || ((functor == r.functor) && (aplly < r.aplly));
-  }
+			return [=](A&&... args) ->R { return (o->*m)(std::forward<A>(args)...); };
+		}
 
-  bool operator==( std::nullptr_t const ) const {
+		template < typename T >
+		static function_t bind(T& o, R(T::* const m)(A...)) {
 
-    return !aplly;
-  }
+			return [=](A&&... args) ->R { return (o->*m)(std::forward<A>(args)...); };
+		}
 
-  bool operator!=( std::nullptr_t const ) const {
+		template < typename T >
+		static function_t bind(T const& o, R(T::* const m)(A...) const) {
 
-    return aplly;
-  }
+			return [=](A&&... args) ->R { return (o->*m)(std::forward<A>(args)...); };
+		}
 
 
-  explicit operator bool() const { 
+		static function_t bind(std::nullptr_t const null_object) {
 
-    return aplly; 
-  }
+			return null_object;
+		}
 
+		static function_t bind(int const null_object) {
 
-  R operator()( A... args ) const {
+			return nullptr;
+		}
 
-    return aplly( functor, std::forward<A>(args)... );
-  }
-};
+
+		void swap(function_t& other) {
+
+			std::swap(*this, other);
+		}
+
+
+		bool operator==(function_t const& r) const {
+
+			return (functor == r.functor) && (aplly == r.aplly);
+		}
+
+		bool operator!=(function_t const& r) const {
+
+			return !operator==(r);
+		}
+
+		bool operator<(function_t const& r) const {
+
+			return (functor < r.functor) || ((functor == r.functor) && (aplly < r.aplly));
+		}
+
+		bool operator==(std::nullptr_t const) const {
+
+			return !aplly;
+		}
+
+		bool operator!=(std::nullptr_t const) const {
+
+			return aplly;
+		}
+
+
+		explicit operator bool() const {
+
+			return aplly;
+		}
+
+
+		R operator()(A... args) const {
+
+			return aplly(functor, std::forward<A>(args)...);
+		}
+	};
 
 }
 

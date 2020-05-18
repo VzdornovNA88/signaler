@@ -1,10 +1,10 @@
 /**
   ******************************************************************************
   * @file             storage.hpp
-  * @brief            
+  * @brief
   * @author           Nik A. Vzdornov (VzdornovNA88@yandex.ru)
   * @date             10.09.19
-  * @copyright 
+  * @copyright
   *
   * Copyright (c) 2019 VzdornovNA88
   *
@@ -26,153 +26,159 @@
   * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
   * SOFTWARE.
   *
-  ****************************************************************************** 
+  ******************************************************************************
   */
 
 #ifndef _STORAGE_
 #define _STORAGE_
 
-namespace signaler {
-namespace detail  {
+#include <variant>
+#include <type_traits>
 
-class storage_t final {
+namespace signaler::detail {
 
-  using deleter_t     = void (*)( void* );
-  using ref_counter_t = size_t;
+	class storage_t final {
 
-  void* store = nullptr;
+		struct control_t { size_t cnt = 0; };
+		template< typename T >
+		struct control_block_t : control_t {
 
-  static auto get_ref_counter( void* _store ) {
+			T payload;
+			control_block_t(T&& _payload) : payload(_payload) {}
+		};
 
-    return static_cast<ref_counter_t*> ( _store );
-  }
+		enum storage_state_t : size_t {
+			INVALID = 0,
+			LOCAL = 1,
+			DYNAMIC = 2,
+		};
 
-  static auto get_deleter( void* _store ) {
+		struct small_object_t {
+			std::byte _array[16];
+		};
 
-    return static_cast<deleter_t*>     (
-           static_cast<void*>          ( 
-           static_cast<ref_counter_t*> ( _store ) + 1) );
-  }
+		using storage_small_object_t = std::aligned_storage<sizeof(small_object_t), alignof(small_object_t)>::type;
+		using storage_big_object_t = void*;
 
-  template < typename T >
-  static auto get_store( void* _store ) {
+		std::variant<std::monostate, storage_small_object_t, storage_big_object_t> store;
 
-    return static_cast< T* >           (
-           static_cast<void*>          (
-           static_cast<deleter_t*>     (
-           static_cast<void*>          ( 
-           static_cast<ref_counter_t*> ( _store ) + 1) ) + 1) );
-  }
 
-  template < typename T >
-  static void deleter( void* _store ) {
+		void destructor(void* p_store) {
 
-    get_ref_counter( _store )->~ref_counter_t();
-    get_store<T>   ( _store )->~T();
-          
-    operator delete (_store);
-    _store = nullptr;
-  }
+			if (p_store == nullptr) return;
 
-  void destructor() {
+			auto& cnt_ref = static_cast<control_t*>(p_store)->cnt;
 
-    if( store == nullptr ) return;
+			if (cnt_ref == 0) {
 
-    ref_counter_t ref_cnt = *get_ref_counter( store );
+				delete p_store;
+				p_store = nullptr;
+			}
+			else {
+				--cnt_ref;
+				p_store = nullptr;
+			}
+		}
 
-    if( ref_cnt == 0 ) {
+	public:
 
-      (*get_deleter( store ))( store );
-    }
-    else {
+		storage_t() = default;
+		storage_t(std::nullptr_t const) : storage_t() {}
+		~storage_t() {
+			if (auto p_store = std::get_if<DYNAMIC>(&store))
+				destructor(*p_store);
+		}
 
-      --ref_cnt;
-      store = nullptr;
-    }
-  }
-  
-public:
+		storage_t(storage_t const& s) {
 
-  storage_t() = default;
-  storage_t( std::nullptr_t const ) : storage_t() {}
-  ~storage_t() { destructor(); }
+			if (auto p_store = std::get_if<DYNAMIC>(&store))
+				destructor(*p_store);
 
-  storage_t( storage_t const& s ) {
+			store = s.store;
 
-    destructor();
+			if (auto p_store = std::get_if<DYNAMIC>(&store))
+				if (*p_store != nullptr)
+					++static_cast<control_t*>(*p_store)->cnt;
+		}
 
-    store = s.store;
+		storage_t(storage_t&& s) {
 
-    if( store != nullptr )
-      ++(*get_ref_counter( store ));
-  }
+			if (auto p_store = std::get_if<DYNAMIC>(&store))
+				destructor(*p_store);
 
-  storage_t( storage_t&& s ) {
+			store = std::move(s.store);
 
-    destructor();
+			if (auto p_store = std::get_if<DYNAMIC>(&s.store)) {
+				*p_store = nullptr;
+				s.store = std::monostate{};
+			}
+		}
 
-    store   = s.store;
-    s.store = nullptr;
-  }
+		storage_t& operator = (storage_t const& s) {
 
-  storage_t& operator = ( storage_t const& s ) {
+			if (auto p_store = std::get_if<DYNAMIC>(&store))
+				destructor(*p_store);
 
-    destructor();
+			store = s.store;
 
-    store = s.store;
+			if (auto p_store = std::get_if<DYNAMIC>(&store))
+				if (*p_store != nullptr)
+					++static_cast<control_t*>(*p_store)->cnt;
 
-    if( store != nullptr )
-      ++(*get_ref_counter( store ));
+			return *this;
+		}
 
-    return *this;
-  }
+		storage_t& operator = (storage_t&& s) {
 
-  storage_t& operator = ( storage_t&& s ) {
+			if (auto p_store = std::get_if<DYNAMIC>(&store))
+				destructor(*p_store);
 
-    destructor();
+			store = std::move(s.store);
 
-    store   = s.store;
-    s.store = nullptr;
+			if (auto p_store = std::get_if<DYNAMIC>(&s.store)) {
+				*p_store = nullptr;
+				s.store = std::monostate{};
+			}
 
-    return *this;
-  }
+			return *this;
+		}
 
-  storage_t& operator = ( std::nullptr_t const null_object ) {
+		storage_t& operator = (std::nullptr_t const null_object) {
 
-    destructor();
-    return *this;
-  }
+			if (auto p_store = std::get_if<DYNAMIC>(&store))
+				destructor(*p_store);
+			return *this;
+		}
 
-  storage_t& operator = ( int const null_object ) {
+		storage_t& operator = (int const null_object) {
 
-    destructor();
-    return *this;
-  }
+			if (auto p_store = std::get_if<DYNAMIC>(&store))
+				destructor(*p_store);
+			return *this;
+		}
 
-  template< typename T >
-  auto init( T&& f ) {
 
-    using functor_t = typename std::decay<T>::type;
+		template< typename T >
+		constexpr auto init(T&& f) {
 
-    destructor();
+			if (auto p_store = std::get_if<DYNAMIC>(&store))
+				destructor(*p_store);
 
-    store = operator new( sizeof( ref_counter_t ) + 
-                          sizeof( deleter_t )     +
-                          sizeof( functor_t )     );
+			using functor_t = typename std::decay<T>::type;
 
-    new ( get_ref_counter( store ) ) ref_counter_t( 0 );
+			if constexpr (sizeof(functor_t) > sizeof(small_object_t)) {
+				store = new control_block_t<functor_t>(std::forward<T>(f));
+				return &static_cast<control_block_t<functor_t>*>(*std::get_if<DYNAMIC>(&store))->payload;
+			}
+			else {
+				store = storage_small_object_t();
+				auto p_store = std::get_if<LOCAL>(&store);
+				new (p_store) functor_t(std::forward<T>(f));
+				return p_store;
+			}
+		}
+	};
 
-    auto del = static_cast<void*>(get_deleter( store ));
-    new ( del ) deleter_t( deleter< functor_t > );
-
-    auto functor = static_cast<void*>(get_store<functor_t>( store ));
-    new ( functor ) functor_t( std::forward<T>(f) );
-
-    return functor;
-  }
-};
-
-}
 }
 
 #endif  //_STORAGE_
