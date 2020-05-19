@@ -74,6 +74,9 @@ int main(int argc, char* argv[])
   dx();
 
 
+  auto d4 = function_t<void()>{ [&,b]() {std::cout << "hello world d4: " << b << std::endl; } };
+  d4();
+
 std::cout << "size dx: " << sizeof(dx) << std::endl;
 
 std::cout << "1" << std::endl;
@@ -147,10 +150,18 @@ std::cout << "7" << std::endl;
   ::signal_t<void(int)> signal_int10;
 
   signal_int10.connect<A,&A::foo1>( &a );
-  signal_int10.connect<A,&A::foo> ( &a );
+  signal_t<void(int)>::connection_t* con = signal_int10.connect<A,&A::foo> ( &a );
 
   signal_int10(1010101010);
+  //std::cout << "signal_int10 = " << con->signal_result() << std::endl;
+  signal_int10.disconnect( con );
   }
+
+  signal_t<int(int)> signal_int_int_0;
+  auto connecion = signal_int_int_0.connect([](int ret) { return ret; });
+  signal_int_int_0(23232323);
+  std::cout << "signal_int_int_0 = " << connecion->signal_result() << std::endl;
+  signal_int_int_0.disconnect(connecion);
 
 
   std::cout << "d1 = " << sizeof( d1 ) << std::endl;

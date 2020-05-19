@@ -49,7 +49,7 @@ namespace signaler::detail {
 
 		enum storage_state_t : size_t {
 			INVALID = 0,
-			LOCAL = 1,
+			LOCAL   = 1,
 			DYNAMIC = 2,
 		};
 
@@ -159,7 +159,7 @@ namespace signaler::detail {
 
 
 		template< typename T >
-		constexpr auto init(T&& f) {
+		[[nodiscard]] constexpr auto init(T&& f) {
 
 			if (auto p_store = std::get_if<DYNAMIC>(&store))
 				destructor(*p_store);

@@ -53,7 +53,7 @@ namespace signaler {
 
 
 		template < R(*f)(A...) >
-		static R _aplly(void* const, A&&... args) {
+		static R _aplly([[maybe_unused]] void* const, A&&... args) {
 
 			return f(std::forward<A>(args)...);
 		}
@@ -82,9 +82,9 @@ namespace signaler {
 
 	public:
 
-		function_t() = default;
+		function_t() = delete;
 
-		function_t(std::nullptr_t const) : function_t() {}
+		function_t(std::nullptr_t const) {}
 
 		template < typename T,
 			typename = typename ::std::enable_if<
@@ -254,12 +254,6 @@ namespace signaler {
 		static function_t bind(int const null_object) {
 
 			return nullptr;
-		}
-
-
-		void swap(function_t& other) {
-
-			std::swap(*this, other);
 		}
 
 
