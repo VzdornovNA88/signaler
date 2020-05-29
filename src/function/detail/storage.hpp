@@ -39,12 +39,29 @@ namespace signaler::detail {
 
 	class storage_t final {
 
-		struct control_t { size_t cnt = 0; };
+		struct control_t { 
+
+			using destructor_t = void(*)(void*);
+
+			size_t       cnt          = 0;
+			destructor_t __destruct__ = nullptr;
+		};
 		template< typename T >
 		struct control_block_t : control_t {
 
 			T payload;
-			control_block_t(T&& _payload) : payload(_payload) {}
+
+			control_block_t(T&& _payload) : payload(std::forward<T>(_payload)) { 
+				__destruct__ = payload_destructor; 
+			}
+
+			control_block_t(const T& _payload) : payload(_payload) {
+				__destruct__ = payload_destructor;
+			}
+
+			static void payload_destructor(void* o) {
+				static_cast<control_block_t<T>*>(o)->payload.~T();
+			}
 		};
 
 		enum storage_state_t : size_t {
@@ -54,7 +71,7 @@ namespace signaler::detail {
 		};
 
 		struct small_object_t {
-			std::byte _array[16];
+			std::byte array[16];
 		};
 
 		using storage_small_object_t = std::aligned_storage<sizeof(small_object_t), alignof(small_object_t)>::type;
@@ -67,16 +84,18 @@ namespace signaler::detail {
 
 			if (p_store == nullptr) return;
 
-			auto& cnt_ref = static_cast<control_t*>(p_store)->cnt;
+			auto cb = static_cast<control_t*>(p_store);
+			auto& cnt_ref = cb->cnt;
 
 			if (cnt_ref == 0) {
 
-				delete p_store;
-				p_store = nullptr;
+				cb->__destruct__(p_store);
+				operator delete (p_store);
+				store = std::monostate{};
 			}
 			else {
 				--cnt_ref;
-				p_store = nullptr;
+				store = std::monostate{};
 			}
 		}
 

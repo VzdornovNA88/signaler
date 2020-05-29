@@ -38,8 +38,8 @@ void foo(int a)
 }
 
 struct B {
-
-  void operator()(int a) {
+	unsigned char mas[256];
+  void operator()(int a) const {
     std::cout << "B::operator(): " << a << std::endl;
   }
 };
@@ -52,14 +52,21 @@ int main(int argc, char* argv[])
  
   std::cout << "A create start" << std::endl;
   A a;
+  B b;
+  auto dB(function_t<void(int)>::bind<B,&B::operator()>(&b));
   //auto d2(function_t<void (int)>::bind<A, &A::foo1>(&a));
   auto d2(function_t<void(int)>::bind(&a, &A::foo1));
   auto d3(function_t<void (int)>{foo});
-  auto d7 = d3;
 
-  if( d3 == d7 )
-	  std::cout << "d3 == d7" << std::endl;
+  {
+	  signal_t<void(int)> signalB;
+	  signalB.connect(std::move(b));
 
+	  function_t<void(int)> d7(std::move(signalB));
+
+	  d7(444);
+  }
+  
   d1(1);
   d2(2);
   d3(3);
@@ -125,10 +132,10 @@ std::cout << "7" << std::endl;
 
   
   B object_b;
-  signal_to_signal.connect( signal_int );
+
   signal_to_signal1.connect( signal_to_signal );
   signal_to_signal2.connect( signal_to_signal1 );
-  signal_to_signal2(1111111);
+  signal_to_signal(1111111);
 
   signal_to_signal2.disconnect( signal_to_signal1 );
 

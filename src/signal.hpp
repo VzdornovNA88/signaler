@@ -186,6 +186,7 @@ namespace signaler {
 		class connection_base_t {
 			slot_t _slot;
 		public:
+			connection_base_t(slot_t&& _s) :_slot(std::forward<slot_t>(_s)) {}
 			connection_base_t(const slot_t& _s) :_slot(_s) {}
 			friend class signal_t< R(A...) >;
 		};
@@ -205,7 +206,9 @@ namespace signaler {
 
 			ret_value_t<R> _result;
 		public:
+			connection_base_with_result_t(slot_t&& _s) :connection_base_t(std::forward<slot_t>(_s)) {}
 			connection_base_with_result_t(const slot_t& _s) :connection_base_t(_s) {}
+
 			friend class signal_t< R(A...) >;
 
 			[[nodiscard]] R signal_result() const { return _result; }
@@ -222,6 +225,10 @@ namespace signaler {
 
 			connections.swap( other.connections );
 			other.connections.clear();
+		}
+
+		~signal_t() {
+			disconnect();
 		}
 
 		signal_t& operator = ( signal_t&& other ) {
@@ -338,9 +345,9 @@ namespace signaler {
 		}
 
 
-		[[nodiscard]] connection_t* connect( slot_t const& slot ) {
+		[[nodiscard]] connection_t* connect( slot_t&& slot ) {
 
-			auto _c = new connection_t(slot);
+			auto _c = new connection_t(std::forward<slot_t>(slot));
 
 			auto it = std::find_if(connections.begin(), connections.end(), [_c](auto _connection) {
 				return _connection == _c;

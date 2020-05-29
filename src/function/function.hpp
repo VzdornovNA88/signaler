@@ -88,12 +88,12 @@ namespace signaler {
 
 		template < typename T,
 			typename = typename ::std::enable_if<
-			!::std::is_same<function_t, typename ::std::decay<T>::type>::value >::type  >
+			!::std::is_same<function_t, typename ::std::decay<T>::type>::value >::type >
 			function_t(T&& f) {
 
 			using functor_t = typename std::decay<T>::type;
 
-			functor = store.init< T >(std::forward<T>(f));
+			functor = store.init(std::forward<T>(f));
 			aplly = _aplly< functor_t >;
 		}
 
@@ -172,7 +172,7 @@ namespace signaler {
 
 			using functor_t = typename std::decay<T>::type;
 
-			functor = store.init< T >(std::forward<T>(f));
+			functor = store.init(std::forward<T>(f));
 			aplly = _aplly< functor_t >;
 
 			return *this;
