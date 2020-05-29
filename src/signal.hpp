@@ -37,6 +37,7 @@
 #include <vector>
 // #include <unordered_set>
 #include <algorithm>
+#include <memory>
 
 
 namespace signaler {
@@ -241,7 +242,7 @@ namespace signaler {
 
 
 		template <typename T, R (T::*m)(A...)>
-		connection_t* connect( T* o ) {
+		std::weak_ptr<connection_t> connect( T* o ) {
 
 			auto _reconnect_slot = function_t<R(A...)>::template bind<T, m>(o);
 
@@ -250,12 +251,12 @@ namespace signaler {
 			});
 
 			if (it == connections.end()) {
-				auto _c = new connection_t(function_t<R(A...)>::template bind<T, m>(o));
+				auto _c = std::make_shared<connection_t>(function_t<R(A...)>::template bind<T, m>(o));
 				connections.push_back(_c);
 				return _c;
 			}
 			else
-				return static_cast<connection_t*>(*it);
+				return std::static_pointer_cast<connection_t>(*it);
 		}
 
 		template <typename T, R (T::*m)(A...)>
@@ -267,16 +268,13 @@ namespace signaler {
 				return _connection->_slot == _disconnect_slot;
 			});
 
-			if (it != connections.end()) {
-				auto _c = *it;
+			if (it != connections.end())
 				connections.erase(it);
-				delete _c;
-			}
 		}
 
 
 		template <typename T, R (T::*m)(A...) const>
-		connection_t* connect( T* o ) {
+		std::weak_ptr<connection_t> connect( T* o ) {
 
 			auto _reconnect_slot = function_t<R(A...)>::template bind<T, m>(o);
 
@@ -285,12 +283,12 @@ namespace signaler {
 			});
 
 			if (it == connections.end()) {
-				auto _c = new connection_t(function_t<R(A...)>::template bind<T, m>(o));
+				auto _c = std::make_shared<connection_t>(function_t<R(A...)>::template bind<T, m>(o));
 				connections.push_back(_c);
 				return _c;
 			}
 			else
-				return static_cast<connection_t*>(*it);
+				return std::static_pointer_cast<connection_t>(*it);
 		}
 
 		template <typename T, R (T::*m)(A...) const>
@@ -302,16 +300,13 @@ namespace signaler {
 				return _connection->_slot == _disconnect_slot;
 			});
 
-			if (it != connections.end()) {
-				auto _c = *it;
+			if (it != connections.end())
 				connections.erase(it);
-				delete _c;
-			}
 		}
 
 
 		template <R(*f)(A...)>
-		connection_t* connect() {
+		std::weak_ptr<connection_t> connect() {
 
 			auto _reconnect_slot = function_t<R(A...)>::template bind<f>();
 
@@ -320,12 +315,12 @@ namespace signaler {
 			});
 
 			if (it == connections.end()) {
-				auto _c = new connection_t(function_t<R(A...)>::template bind<f>());
+				auto _c = std::make_shared<connection_t>(function_t<R(A...)>::template bind<f>());
 				connections.push_back(_c);
 				return _c;
 			}
 			else
-				return static_cast<connection_t*>(*it);
+				return std::static_pointer_cast<connection_t>(*it);
 		}
 
 		template <R(*f)(A...)>
@@ -337,17 +332,14 @@ namespace signaler {
 				return _connection->_slot == _disconnect_slot;
 			});
 
-			if (it != connections.end()) {
-				auto _c = *it;
+			if (it != connections.end())
 				connections.erase(it);
-				delete _c;
-			}
 		}
 
 
-		[[nodiscard]] connection_t* connect( slot_t&& slot ) {
+		[[nodiscard]] std::weak_ptr<connection_t> connect( slot_t&& slot ) {
 
-			auto _c = new connection_t(std::forward<slot_t>(slot));
+			auto _c = std::make_shared<connection_t>(std::forward<slot_t>(slot));
 
 			auto it = std::find_if(connections.begin(), connections.end(), [_c](auto _connection) {
 				return _connection == _c;
@@ -358,68 +350,61 @@ namespace signaler {
 				return _c;
 			}
 			else
-				return static_cast<connection_t*>(*it);
+				return std::static_pointer_cast<connection_t>(*it);
 		}
 
 
-		connection_t* connect( signal_t& signal ) {
+		std::weak_ptr<connection_t> connect( signal_t& signal ) {
 			return connect<signal_t,&signal_t::operator()>(&signal);
 		}
 
 		void disconnect(signal_t& _disconnect_signal) {
 
-			auto _disconnect_slot = function_t<R(A...)>::template bind<signal_t, &signal_t::operator()>(&_disconnect_signal);
+			auto _disconnect_slot = 
+				function_t<R(A...)>::template bind<signal_t, &signal_t::operator()>(&_disconnect_signal);
 
 			auto it = std::find_if(connections.begin(), connections.end(), [&_disconnect_slot](auto _connection) {
 				return _connection->_slot == _disconnect_slot;
 			});
 
-			if (it != connections.end()) {
-				auto _c = *it;
+			if (it != connections.end())
 				connections.erase(it);
-				delete _c;
-			}
 		}
 
 
-		void disconnect(connection_base_t* _c ) {
+		void disconnect(std::weak_ptr<connection_t> _c ) {
 
-			if (_c == nullptr) return;
+			if (_c.expired()) return;
 
 			auto it = std::find_if(connections.begin(), connections.end(), [_c](auto _connection) {
-				return _connection == _c;
+				return _connection == _c.lock();
 			});
 
-			if (it != connections.end()) {
-				auto _c = *it;
+			if (it != connections.end())
 				connections.erase(it);
-				delete _c;
-			}
 		}
 
 
 		void disconnect() {
 
 			for (auto _c : connections)
-				disconnect( _c );
+				disconnect(std::static_pointer_cast<connection_t>(_c));
 		}
 
 
 		constexpr void operator()(A... p) const {
 
 			for (auto connection : connections) {
-				if (connection != nullptr) {
-					if constexpr (std::is_same<R, void>::value)
-						connection->_slot(std::forward<A>(p)...);
-					else
-						static_cast<connection_t*>(connection)->_result = 
-						connection->_slot(std::forward<A>(p)...);
-				}
+				if constexpr (std::is_same<R, void>::value)
+					connection->_slot(std::forward<A>(p)...);
+				else
+					std::static_pointer_cast<connection_t>(connection)->_result =
+					connection->_slot(std::forward<A>(p)...);
 			}
 		}
 
-		// создать кучу на векторе, заменить сырой указаетль на shared_ptr
-		private: std::vector<connection_base_t*> connections;
+		// создать кучу на векторе
+		private: std::vector<std::shared_ptr<connection_base_t>> connections;
 	};
 
 }
