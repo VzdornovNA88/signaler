@@ -160,14 +160,14 @@ std::cout << "7" << std::endl;
   auto con = signal_int10.connect<A,&A::foo> ( &a );
 
   signal_int10(1010101010);
-  //std::cout << "signal_int10 = " << con.lock()->signal_result() << std::endl;
+  //std::cout << "signal_int10 = " << con.signal_result() << std::endl;
   signal_int10.disconnect( con );
   }
 
   signal_t<int(int)> signal_int_int_0;
   auto connecion = signal_int_int_0.connect([](int ret) { return ret; });
   signal_int_int_0(23232323);
-  std::cout << "signal_int_int_0 = " << connecion.lock()->signal_result() << std::endl;
+  std::cout << "signal_int_int_0 = " << connecion.signal_result() << std::endl;
   signal_int_int_0.disconnect(connecion);
 
 
