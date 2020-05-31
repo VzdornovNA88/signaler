@@ -255,19 +255,16 @@ namespace signaler {
 		template <typename T, R(T::*m)(A...)>
 		connection_t connect(T* o) {
 
-			auto _reconnect_slot = function_t<R(A...)>::template bind<T, m>(o);
+			auto _c = connection_t(function_t<R(A...)>::template bind<T, m>(o));
 
-			auto it = std::find_if(connections.begin(), connections.end(), [&_reconnect_slot](const auto& _connection) {
-				return _connection._slot == _reconnect_slot;
+			auto it = std::find_if(connections.begin(), connections.end(), [&_c](const auto& _connection) {
+				return _connection == _c;
 			});
 
-			if (it == connections.end()) {
-				auto _c = connection_t(function_t<R(A...)>::template bind<T, m>(o));
+			if (it == connections.end())
 				connections.push_back(_c);
-				return _c;
-			}
-			else
-				return *it;
+
+			return _c;
 		}
 
 		template <typename T, R(T::*m)(A...)>
@@ -287,19 +284,16 @@ namespace signaler {
 		template <typename T, R(T::*m)(A...) const>
 		connection_t connect(T* o) {
 
-			auto _reconnect_slot = function_t<R(A...)>::template bind<T, m>(o);
+			auto _c = connection_t(function_t<R(A...)>::template bind<T, m>(o));
 
-			auto it = std::find_if(connections.begin(), connections.end(), [&_reconnect_slot](const auto& _connection) {
-				return _connection._slot == _reconnect_slot;
+			auto it = std::find_if(connections.begin(), connections.end(), [&_c](const auto& _connection) {
+				return _connection == _c;
 			});
 
-			if (it == connections.end()) {
-				auto _c = connection_t(function_t<R(A...)>::template bind<T, m>(o));
+			if (it == connections.end())
 				connections.push_back(_c);
-				return _c;
-			}
-			else
-				return *it;
+
+			return _c;
 		}
 
 		template <typename T, R(T::*m)(A...) const>
@@ -319,19 +313,16 @@ namespace signaler {
 		template <R(*f)(A...)>
 		connection_t connect() {
 
-			auto _reconnect_slot = function_t<R(A...)>::template bind<f>();
+			auto _c = connection_t(function_t<R(A...)>::template bind<f>());
 
-			auto it = std::find_if(connections.begin(), connections.end(), [&_reconnect_slot](const auto& _connection) {
-				return _connection._slot == _reconnect_slot;
+			auto it = std::find_if(connections.begin(), connections.end(), [&_c](const auto& _connection) {
+				return _connection == _c;
 			});
 
-			if (it == connections.end()) {
-				auto _c = connection_t(function_t<R(A...)>::template bind<f>());
+			if (it == connections.end())
 				connections.push_back(_c);
-				return _c;
-			}
-			else
-				return *it;
+
+			return _c;
 		}
 
 		template <R(*f)(A...)>
@@ -356,12 +347,10 @@ namespace signaler {
 				return _connection == _c;
 			});
 
-			if (it == connections.end()) {
+			if (it == connections.end())
 				connections.push_back(_c);
-				return _c;
-			}
-			else
-				return *it;
+
+			return _c;
 		}
 
 
