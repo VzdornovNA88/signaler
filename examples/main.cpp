@@ -54,8 +54,8 @@ int main(int argc, char* argv[])
   A a;
   B b;
   auto dB(function_t<void(int)>::bind<B,&B::operator()>(&b));
-  //auto d2(function_t<void (int)>::bind<A, &A::foo1>(&a));
-  auto d2(function_t<void(int)>::bind(&a, &A::foo1));
+  auto d2(function_t<void (int)>::bind<A, &A::foo1>(&a));
+  //auto d2(function_t<void(int)>::bind(&a, &A::foo1));
   auto d3(function_t<void (int)>{foo});
 
   {
@@ -105,7 +105,7 @@ auto  dx_copy = dx;
 std::cout << "5" << std::endl;
 
 dx_copy();
-dx_copy = 61651615;
+dx_copy = nullptr;
 if( dx_copy == 0 ) 
   std::cout << "6" << std::endl;
 }
@@ -165,10 +165,17 @@ std::cout << "7" << std::endl;
   }
 
   signal_t<int(int)> signal_int_int_0;
-  auto connecion = signal_int_int_0.connect([](int ret) { return ret; });
-  signal_int_int_0(23232323);
-  std::cout << "signal_int_int_0 = " << connecion.signal_result() << std::endl;
-  signal_int_int_0.disconnect(connecion);
+  signal_t<int(int)>::connection_t connections[100];
+
+  for( int i = 0; i < 100; i++ ) 
+	  connections[i] = signal_int_int_0.connect([i](int ret) { return ret + i; });
+
+  signal_int_int_0(0);
+
+  for (int i = 0; i < 100; i++) {
+	  std::cout << "signal_int_int_0 " << i << " = " << connections[i].signal_result() << std::endl;
+	  signal_int_int_0.disconnect(connections[i]);
+  }
 
 
   std::cout << "d1 = " << sizeof( d1 ) << std::endl;

@@ -32,151 +32,18 @@
 #ifndef _SIGNAL_
 #define _SIGNAL_
 
-#include "function/function.hpp"
-  // #include <set>
+#include "../function/function.hpp"
+#include "detail/id_connection_generator.hpp"
+
 #include <vector>
-// #include <unordered_set>
 #include <algorithm>
 #include <memory>
 
 
 namespace signaler {
 
-	// template <typename... A>
-	// class signal_t final {
-
-	// 	struct FunctionHasher
-	// 	{
-	// 		size_t
-	// 			operator()(const function_t<void(A...)> & obj) const
-	// 		{
-	// 			return std::hash<size_t>()(obj.hash_code());
-	// 		}
-	// 	};
-
-	// 	// Custom comparator that compares the string objects by length
-	// 	struct FunctionComparator
-	// 	{
-	// 		bool
-	// 			operator()(const function_t<void(A...)> & obj1, const function_t<void(A...)> & obj2) const
-	// 		{
-	// 			if (obj1 == obj2)
-	// 				return true;
-	// 			return false;
-	// 		}
-	// 	};
-
-	//  using slot_t = function_t<void(A...)>;
-	//  mutable std::unordered_set<slot_t, FunctionHasher, FunctionComparator> slots;
-
-	// public:
-
-	//  signal_t() {}
-
-	//  signal_t( signal_t const& other ) {
-
-	//    slots = other.slots;
-	//  }
-
-	//  signal_t& operator = (signal_t const& other) {
-
-	//    disconnect();
-	//    slots = other.slots;
-	//    return *this;
-	//  }
-
-	//  template <typename T>
-	//  void connect( T *o, void (T::*m)(A...) ) const {
-
-	//    slots.emplace( o,m );
-	//  }
-
-	//  template <typename T>
-	//  	void disconnect(T* o, void (T::*m)(A...)) const {
-
-	//  		slots.erase(function_t<void(A...)>(o, m));
-	//  	}
-
-
-	//  template <typename T>
-	//  void connect( T *o, void (T::*m)(A...) const ) const {
-
-	//    slots.emplace( o,m );
-	//  }
-
-	//  template <typename T>
-	//  void disconnect(T* o, void (T::*m)(A...) const ) const {
-
-	// 	slots.erase(function_t<void(A...)>(o, m));
-	//  }
-
-
-	//  template <typename T, void (T::*m)(A...)>
-	//  void connect( T *o ) const {
-
-	//    slots.insert( function_t<void (A...)>::template bind<T, m>( o ) );
-	//  }
-
-	//  template <typename T, void (T::*m)(A...)>
-	//  void disconnect(T* o) const {
-
-	// 	slots.erase(function_t<void(A...)>::template bind<T, m>(o));
-	//  }
-
-
-	//  template <typename T, void (T::*m)(A...) const>
-	//  void connect( T *o ) const {
-
-	//    slots.insert( function_t<void (A...)>::template bind<T, m>( o ) );
-	//  }
-
-	//  template <typename T, void (T::*m)(A...) const>
-	//  void disconnect(T* o) const {
-
-	// 	slots.erase(function_t<void(A...)>::template bind<T, m>(o));
-	//  }
-
-
-	//  void connect( slot_t const& slot ) const {
-
-	//    slots.emplace( slot );
-	//  }
-
-	//  	void disconnect(slot_t const& _disconnect_slot) const {
-
-	// 			slots.erase(_disconnect_slot);
-	// 		}
-
-
-	// 		void connect(signal_t& _signal) const {
-	// 			connect(&_signal, &signal_t::operator());
-	// 		}
-
-	// 		void disconnect(signal_t& _disconnect_slot) const {
-
-	// 			disconnect(&_disconnect_slot, &signal_t::operator());
-	// 		}
-
-
-	//  void disconnect() const {
-
-	//    slots.clear();
-	//  }
-
-	//  void operator()( A... p ) const {
-
-	//    for(const auto& slot : slots)
-	//      slot(std::forward<A>(p)...);
-	//  }
-	// };
-
-
-	///////////////////////////////////////////////////////////////////
-	///////////////////////////////////////////////////////////////////
-
 	template <typename T>
 	class signal_t;
-
 
 	template < typename R, typename ...A >
 	class signal_t< R(A...) >  final {
@@ -185,21 +52,24 @@ namespace signaler {
 
 	private:
 		class connection_base_t {
-			slot_t _slot;
+			slot_t _slot  = nullptr;
+			long long _id = id_t::UNDEFINED;
+
+			connection_base_t(slot_t&& _s) :_slot(std::forward<slot_t>(_s)), _id(id_t::get()) {}
+			connection_base_t(const slot_t& _s) :_slot(_s), _id(id_t::get()) {}
 		public:
-			connection_base_t(slot_t&& _s) :_slot(std::forward<slot_t>(_s)) {}
-			connection_base_t(const slot_t& _s) :_slot(_s) {}
+			connection_base_t() = default;
 
 			friend class signal_t< R(A...) >;
 
 			bool operator<(connection_base_t const& r) const {
 
-				return (_slot < r._slot);
+				return (_id < r._id);
 			}
 
 			bool operator==(connection_base_t const& r) const {
 
-				return (_slot == r._slot);
+				return (_id == r._id);
 			}
 		};
 
@@ -216,14 +86,20 @@ namespace signaler {
 				operator T() const { return _val; }
 			};
 
-			mutable ret_value_t<R> _result;
+			connection_base_with_result_t(slot_t&& _s) :connection_base_t(std::forward<slot_t>(_s)),
+				_result(std::make_shared<ret_value_t<R>>()) {}
+
+			connection_base_with_result_t(const slot_t& _s) :connection_base_t(_s),
+				_result(std::make_shared<ret_value_t<R>>()) {}
+
+			mutable std::shared_ptr<ret_value_t<R>> _result;
 		public:
-			connection_base_with_result_t(slot_t&& _s) :connection_base_t(std::forward<slot_t>(_s)) {}
-			connection_base_with_result_t(const slot_t& _s) :connection_base_t(_s) {}
+
+			connection_base_with_result_t() = default;
 
 			friend class signal_t< R(A...) >;
 
-			[[nodiscard]] R signal_result() const { return _result; }
+			[[nodiscard]] R signal_result() const { return *_result; }
 		};
 
 	public:
@@ -258,7 +134,7 @@ namespace signaler {
 			auto _c = connection_t(function_t<R(A...)>::template bind<T, m>(o));
 
 			auto it = std::find_if(connections.begin(), connections.end(), [&_c](const auto& _connection) {
-				return _connection == _c;
+				return _connection._slot == _c._slot;
 			});
 
 			if (it == connections.end())
@@ -287,7 +163,7 @@ namespace signaler {
 			auto _c = connection_t(function_t<R(A...)>::template bind<T, m>(o));
 
 			auto it = std::find_if(connections.begin(), connections.end(), [&_c](const auto& _connection) {
-				return _connection == _c;
+				return _connection._slot == _c._slot;
 			});
 
 			if (it == connections.end())
@@ -316,7 +192,7 @@ namespace signaler {
 			auto _c = connection_t(function_t<R(A...)>::template bind<f>());
 
 			auto it = std::find_if(connections.begin(), connections.end(), [&_c](const auto& _connection) {
-				return _connection == _c;
+				return _connection._slot == _c._slot;
 			});
 
 			if (it == connections.end())
@@ -344,7 +220,7 @@ namespace signaler {
 			auto _c = connection_t(std::forward<slot_t>(slot));
 
 			auto it = std::find_if(connections.begin(), connections.end(), [&_c](const auto& _connection) {
-				return _connection == _c;
+				return _connection._slot == _c._slot;
 			});
 
 			if (it == connections.end())
@@ -371,12 +247,10 @@ namespace signaler {
 				connections.erase(it);
 		}
 
-
+	    
 		void disconnect(const connection_t& _c) {
 
-			auto it = std::find_if(connections.begin(), connections.end(), [&_c](const auto& _connection) {
-				return _connection == _c;
-			});
+			auto it = std::lower_bound(connections.begin(), connections.end(), _c, std::less<>{});
 
 			if (it != connections.end())
 				connections.erase(it);
@@ -396,12 +270,13 @@ namespace signaler {
 				if constexpr (std::is_same<R, void>::value)
 					connection._slot(std::forward<A>(p)...);
 				else
-					connection._result =
+					*connection._result =
 					connection._slot(std::forward<A>(p)...);
 			}
 		}
 
-		// создать кучу на векторе
+		// что делать с протухшими копиями конекшенов(копии конекшенов при вызове коннекта) , которые пользователь хранит у себя в коде?
+		//
 	private: std::vector<connection_t> connections;
 	};
 
