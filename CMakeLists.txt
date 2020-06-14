@@ -27,8 +27,10 @@ set (CMAKE_ARCHIVE_OUTPUT_DIRECTORY
         "Single Directory for all"
     )
 
-#	enable_testing()
+enable_testing()
 # Включите подпроекты.
 
 add_subdirectory ("examples")
+add_subdirectory ("tests/functions")
+add_subdirectory ("tests/signals")
 
