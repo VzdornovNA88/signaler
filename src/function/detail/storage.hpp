@@ -68,6 +68,7 @@ namespace signaler::detail {
 			INVALID = 0,
 			LOCAL   = 1,
 			DYNAMIC = 2,
+			POINTER  = 3,
 		};
 
 		struct small_object_t {
@@ -76,8 +77,9 @@ namespace signaler::detail {
 
 		using storage_small_object_t = std::aligned_storage<sizeof(small_object_t), alignof(small_object_t)>::type;
 		using storage_big_object_t = void*;
+		using storage_ptr_object_t = std::byte*;
 
-		std::variant<std::monostate, storage_small_object_t, storage_big_object_t> store;
+		std::variant<std::monostate, storage_small_object_t, storage_big_object_t, storage_ptr_object_t> store;
 
 
 		void destructor(void* p_store) {
@@ -166,6 +168,9 @@ namespace signaler::detail {
 
 			if (auto p_store = std::get_if<DYNAMIC>(&store))
 				destructor(*p_store);
+
+			store = std::monostate{};
+
 			return *this;
 		}
 
@@ -173,28 +178,91 @@ namespace signaler::detail {
 
 			if (auto p_store = std::get_if<DYNAMIC>(&store))
 				destructor(*p_store);
+
+			store = std::monostate{};
+
 			return *this;
 		}
 
 
-		template< typename T >
-		[[nodiscard]] constexpr auto init(T&& f) {
+		template<typename T>
+		storage_t(T f) {
 
 			if (auto p_store = std::get_if<DYNAMIC>(&store))
 				destructor(*p_store);
 
 			using functor_t = typename std::decay<T>::type;
 
+			if constexpr (std::is_pointer_v<T>)
+				store = reinterpret_cast<storage_ptr_object_t>(f);
+			else
 			if constexpr (sizeof(functor_t) > sizeof(small_object_t)) {
 				store = new control_block_t<functor_t>(std::forward<T>(f));
-				return &static_cast<control_block_t<functor_t>*>(*std::get_if<DYNAMIC>(&store))->payload;
 			}
 			else {
 				store = storage_small_object_t();
 				auto p_store = std::get_if<LOCAL>(&store);
 				new (p_store) functor_t(std::forward<T>(f));
-				return p_store;
 			}
+		}
+
+		template<typename T>
+		storage_t& operator = (T f) {
+
+			if (auto p_store = std::get_if<DYNAMIC>(&store))
+				destructor(*p_store);
+
+			using functor_t = typename std::decay<T>::type;
+
+			if constexpr (std::is_pointer_v<T>)
+				store = reinterpret_cast<storage_ptr_object_t>(f);
+			else
+			if constexpr (sizeof(functor_t) > sizeof(small_object_t)) {
+				store = new control_block_t<functor_t>(std::forward<T>(f));
+			}
+			else {
+				store = storage_small_object_t();
+				auto p_store = std::get_if<LOCAL>(&store);
+				new (p_store) functor_t(std::forward<T>(f));
+			}
+
+			return *this;
+		}
+
+
+		template< typename T >
+		[[nodiscard]] constexpr auto get() {
+
+			using object_t = typename std::decay<T>::type;
+
+			if constexpr (std::is_pointer_v<T>)
+				return &reinterpret_cast<T>(*std::get_if<POINTER>(&store));
+			else if constexpr (sizeof(object_t) > sizeof(small_object_t)) {
+				return reinterpret_cast<T*>(&static_cast<control_block_t<object_t>*>(*std::get_if<DYNAMIC>(&store))->payload);
+			}
+			else {
+				return reinterpret_cast<T*>(std::get_if<LOCAL>(&store));
+			}
+		}
+
+
+		bool operator==(storage_t const& r) const {
+
+			if (store.index() == INVALID && r.store.index() == INVALID)
+				return true;
+			else
+			if (store.index() == POINTER && r.store.index() == POINTER)
+				return (*std::get_if<POINTER>(&store) == *std::get_if<POINTER>(&r.store));
+			else
+				return false;
+		}
+
+		bool operator<(storage_t const& r) const {
+
+			if (store.index() == POINTER && r.store.index() == POINTER)
+				return (*std::get_if<POINTER>(&store) < *std::get_if<POINTER>(&r.store));
+			else
+				return false;
 		}
 	};
 

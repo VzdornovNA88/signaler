@@ -44,41 +44,47 @@ namespace signaler {
 	template< typename R, typename ...A >
 	class function_t< R(A...) > final {
 
-		using wraper_t = R(*)(void*, A&&...);
+		using wraper_t = R(*)(detail::storage_t*, A&&...);
+
+		template<typename T>
+		using is_not_function = typename ::std::enable_if<
+			!::std::is_same<function_t, typename ::std::decay<T>::type>::value >::type;
 
 
-		void*              functor = nullptr;
-		wraper_t           aplly = nullptr;
-		detail::storage_t  store;
+		wraper_t                   aplly = nullptr;
+		mutable detail::storage_t  store = nullptr;
 
 
 		template < R(*f)(A...) >
-		static R _aplly([[maybe_unused]] void* const, A&&... args) {
+		static R _aplly([[maybe_unused]] detail::storage_t* const, A&&... args) {
 
 			return f(std::forward<A>(args)...);
 		}
 
 		template < typename T, R(T::*m)(A...) >
-		static R _aplly(void* const o, A&&... args) {
+		static R _aplly(detail::storage_t* const s, A&&... args) {
 
-			return (static_cast<T*>(o)->*m)(std::forward<A>(args)...);
+			return ((*s->get<T*>())->*m)(std::forward<A>(args)...);
 		}
 
 		template < typename T, R(T::*m)(A...) const >
-		static R _aplly(void* const o, A&&... args) {
+		static R _aplly(detail::storage_t* const s, A&&... args) {
 
-			return (static_cast<T const*>(o)->*m)(std::forward<A>(args)...);
+			return ((*s->get<T const*>())->*m)(std::forward<A>(args)...);
 		}
 
 		template <typename T>
-		static R _aplly(void* const o, A&&... args) {
+		static R _aplly(detail::storage_t* const s, A&&... args) {
 
-			return (*static_cast<T*>(o))(std::forward<A>(args)...);
+			return (*s->get<T>())(std::forward<A>(args)...);
 		}
 
 
 		function_t(void* const o, wraper_t const m) :
-			functor(o), aplly(m) {}
+			store(o), aplly(m) {}
+
+		function_t(std::nullptr_t const o, wraper_t const m) :
+			store(o), aplly(m) {}
 
 	public:
 
@@ -86,16 +92,8 @@ namespace signaler {
 
 		function_t(std::nullptr_t const) {}
 
-		template < typename T,
-			typename = typename ::std::enable_if<
-			!::std::is_same<function_t, typename ::std::decay<T>::type>::value >::type >
-			function_t(T&& f) {
-
-			using functor_t = typename std::decay<T>::type;
-
-			functor = store.init(std::forward<T>(f));
-			aplly = _aplly< functor_t >;
-		}
+		template <typename T, typename functor_t = typename std::decay<T>::type, typename = is_not_function<T>>
+		function_t(T&& f) : store(std::forward<T>(f)), aplly(_aplly< functor_t >) {}
 
 
 		template < typename T >
@@ -125,7 +123,6 @@ namespace signaler {
 
 		function_t(function_t const& f) {
 
-			functor = f.functor;
 			aplly = f.aplly;
 			store = f.store;
 		}
@@ -133,18 +130,15 @@ namespace signaler {
 
 		function_t(function_t&& f) {
 
-			functor = f.functor;
 			aplly = f.aplly;
 			store = ::std::move(f.store);
 
-			f.functor = nullptr;
 			f.aplly = nullptr;
 		}
 
 
 		function_t& operator = (function_t const& f) {
 
-			functor = f.functor;
 			aplly = f.aplly;
 			store = f.store;
 
@@ -154,25 +148,21 @@ namespace signaler {
 
 		function_t& operator = (function_t&& f) {
 
-			functor = f.functor;
 			aplly = f.aplly;
 			store = ::std::move(f.store);
 
-			f.functor = nullptr;
 			f.aplly = nullptr;
 
 			return *this;
 		}
 
 
-		template < typename T,
-			typename = typename ::std::enable_if<
-			!::std::is_same<function_t, typename ::std::decay<T>::type>::value  >::type >
+		template < typename T, typename = is_not_function<T> >
 			function_t& operator = (T&& f) {
 
 			using functor_t = typename std::decay<T>::type;
 
-			functor = store.init(std::forward<T>(f));
+			store = std::forward<T>(f);
 			aplly = _aplly< functor_t >;
 
 			return *this;
@@ -259,7 +249,7 @@ namespace signaler {
 
 		bool operator==(function_t const& r) const {
 
-			return (functor == r.functor) && (aplly == r.aplly);
+			return (store == r.store) && (aplly == r.aplly);
 		}
 
 		bool operator!=(function_t const& r) const {
@@ -269,7 +259,7 @@ namespace signaler {
 
 		bool operator<(function_t const& r) const {
 
-			return (functor < r.functor) || ((functor == r.functor) && (aplly < r.aplly));
+			return (store < r.store) || ((store == r.store) && (aplly < r.aplly));
 		}
 
 		bool operator==(std::nullptr_t const) const {
@@ -291,7 +281,7 @@ namespace signaler {
 
 		R operator()(A... args) const {
 
-			return aplly(functor, std::forward<A>(args)...);
+			return aplly(&store, std::forward<A>(args)...);
 		}
 	};
 
