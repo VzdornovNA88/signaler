@@ -236,8 +236,7 @@ namespace signaler::detail {
 			using object_t = typename std::decay<T>::type;
 
 			if constexpr (std::is_pointer_v<T>) {
-				auto _r = reinterpret_cast<T>(*std::get_if<POINTER>(&store));
-				return &_r;
+				return &reinterpret_cast<T>(*std::get_if<POINTER>(&store));
 			}
 			else if constexpr (sizeof(object_t) > sizeof(small_object_t)) {
 				return reinterpret_cast<T*>(&static_cast<control_block_t<object_t>*>(*std::get_if<DYNAMIC>(&store))->payload);
