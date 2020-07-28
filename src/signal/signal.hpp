@@ -131,16 +131,19 @@ namespace signaler {
 		template <typename T, R(T::*m)(A...)>
 		connection_t connect(T* o) {
 
-			auto _c = connection_t(function_t<R(A...)>::template bind<T, m>(o));
+			auto _slot = function_t<R(A...)>::template bind<T, m>(o);
 
-			auto it = std::find_if(connections.begin(), connections.end(), [&_c](const auto& _connection) {
-				return _connection._slot == _c._slot;
+			auto it = std::find_if(connections.begin(), connections.end(), [&_slot](const auto& _connection) {
+				return _connection._slot == _slot;
 			});
 
-			if (it == connections.end())
+			if (it == connections.end()) {
+				auto _c = connection_t(std::forward<slot_t>(_slot));
 				connections.push_back(_c);
-
-			return _c;
+				return _c;
+			}
+			else
+				return *it;
 		}
 
 		template <typename T, R(T::*m)(A...)>
@@ -160,16 +163,19 @@ namespace signaler {
 		template <typename T, R(T::*m)(A...) const>
 		connection_t connect(T* o) {
 
-			auto _c = connection_t(function_t<R(A...)>::template bind<T, m>(o));
+			auto _slot = function_t<R(A...)>::template bind<T, m>(o);
 
-			auto it = std::find_if(connections.begin(), connections.end(), [&_c](const auto& _connection) {
-				return _connection._slot == _c._slot;
+			auto it = std::find_if(connections.begin(), connections.end(), [&_slot](const auto& _connection) {
+				return _connection._slot == _slot;
 			});
 
-			if (it == connections.end())
+			if (it == connections.end()) {
+				auto _c = connection_t(std::forward<slot_t>(_slot));
 				connections.push_back(_c);
-
-			return _c;
+				return _c;
+			}
+			else
+				return *it;
 		}
 
 		template <typename T, R(T::*m)(A...) const>
@@ -189,16 +195,19 @@ namespace signaler {
 		template <R(*f)(A...)>
 		connection_t connect() {
 
-			auto _c = connection_t(function_t<R(A...)>::template bind<f>());
+			auto _slot = function_t<R(A...)>::template bind<f>();
 
-			auto it = std::find_if(connections.begin(), connections.end(), [&_c](const auto& _connection) {
-				return _connection._slot == _c._slot;
+			auto it = std::find_if(connections.begin(), connections.end(), [&_slot](const auto& _connection) {
+				return _connection._slot == _slot;
 			});
 
-			if (it == connections.end())
+			if (it == connections.end()) {
+				auto _c = connection_t(std::forward<slot_t>(_slot));
 				connections.push_back(_c);
-
-			return _c;
+				return _c;
+			}
+			else
+				return *it;
 		}
 
 		template <R(*f)(A...)>
@@ -217,16 +226,17 @@ namespace signaler {
 
 		[[nodiscard]] connection_t connect(slot_t&& slot) {
 
-			auto _c = connection_t(std::forward<slot_t>(slot));
-
-			auto it = std::find_if(connections.begin(), connections.end(), [&_c](const auto& _connection) {
-				return _connection._slot == _c._slot;
+			auto it = std::find_if(connections.begin(), connections.end(), [&slot](const auto& _connection) {
+				return _connection._slot == slot;
 			});
 
-			if (it == connections.end())
+			if (it == connections.end()) {
+				auto _c = connection_t(std::forward<slot_t>(slot));
 				connections.push_back(_c);
-
-			return _c;
+				return _c;
+			}
+			else
+				return *it;
 		}
 
 

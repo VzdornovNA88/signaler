@@ -161,7 +161,8 @@ std::cout << "7" << std::endl;
 
   signal_int10(1010101010);
   //std::cout << "signal_int10 = " << con.signal_result() << std::endl;
-  signal_int10.disconnect( con );
+  //signal_int10.disconnect( con );
+  signal_int10.disconnect<A, &A::foo>(&a);
   }
 
   signal_t<int(int)> signal_int_int_0;
