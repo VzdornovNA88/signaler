@@ -29,8 +29,8 @@
   ******************************************************************************
   */
 
-#ifndef _ID_GEN_CON_
-#define _ID_GEN_CON_
+#ifndef SIGNALER_ID_GEN_CON
+#define SIGNALER_ID_GEN_CON
 
 
 namespace signaler {
@@ -47,4 +47,4 @@ namespace signaler {
 
 }
 
-#endif  //_ID_GEN_CON_
+#endif  // SIGNALER_ID_GEN_CON

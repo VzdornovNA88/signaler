@@ -29,8 +29,8 @@
   ******************************************************************************
   */
 
-#ifndef _FUNCTION_
-#define _FUNCTION_
+#ifndef SIGNALER_FUNCTION
+#define SIGNALER_FUNCTION
 
 #include <utility>
 #include <type_traits>
@@ -287,4 +287,4 @@ namespace signaler {
 
 }
 
-#endif  //_FUNCTION_
+#endif  // SIGNALER_FUNCTION

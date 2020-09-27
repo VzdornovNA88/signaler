@@ -29,8 +29,8 @@
   ******************************************************************************
   */
 
-#ifndef _STORAGE_
-#define _STORAGE_
+#ifndef SIGNALER_STORAGE
+#define SIGNALER_STORAGE
 
 #include <variant>
 #include <type_traits>
@@ -44,7 +44,7 @@ namespace signaler::detail {
 			using destructor_t = void(*)(void*);
 
 			size_t       cnt          = 0;
-			destructor_t __destruct__ = nullptr;
+			destructor_t destruct_ = nullptr;
 		};
 		template< typename T >
 		struct control_block_t : control_t {
@@ -52,11 +52,11 @@ namespace signaler::detail {
 			T payload;
 
 			control_block_t(T&& _payload) : payload(std::forward<T>(_payload)) { 
-				__destruct__ = payload_destructor; 
+				destruct_ = payload_destructor; 
 			}
 
 			control_block_t(const T& _payload) : payload(_payload) {
-				__destruct__ = payload_destructor;
+				destruct_ = payload_destructor;
 			}
 
 			static void payload_destructor(void* o) {
@@ -65,21 +65,27 @@ namespace signaler::detail {
 		};
 
 		enum storage_state_t : size_t {
-			INVALID = 0,
-			LOCAL   = 1,
-			DYNAMIC = 2,
-			POINTER  = 3,
+			INVALID   = 0,
+			LOCAL     = 1,
+			DYNAMIC   = 2,
+			POINTER   = 3,
+			POINTER_F = 4,
 		};
 
-		struct small_object_t {
+		struct small_t {
 			std::byte array[16];
 		};
 
-		using storage_small_object_t = std::aligned_storage<sizeof(small_object_t), alignof(small_object_t)>::type;
-		using storage_big_object_t = void*;
-		using storage_ptr_object_t = std::byte*;
+		using small_object_t = std::aligned_storage<sizeof(small_t), alignof(small_t)>::type;
+		using big_object_t   = void*;
+		using ptr_object_t   = std::byte*;
+		using ptr_function_t = void (*) ();
 
-		std::variant<std::monostate, storage_small_object_t, storage_big_object_t, storage_ptr_object_t> store;
+		std::variant< std::monostate , 
+			          small_object_t , 
+			          big_object_t   , 
+			          ptr_object_t   , 
+			          ptr_function_t > store;
 
 
 		void destructor(void* p_store) {
@@ -91,7 +97,7 @@ namespace signaler::detail {
 
 			if (cnt_ref == 0) {
 
-				cb->__destruct__(p_store);
+				cb->destruct_(p_store);
 				operator delete (p_store);
 				store = std::monostate{};
 			}
@@ -193,14 +199,17 @@ namespace signaler::detail {
 
 			using functor_t = typename std::decay<T>::type;
 
-			if constexpr (std::is_pointer_v<T>)
-				store = reinterpret_cast<storage_ptr_object_t>(f);
+			if constexpr (std::is_function_v<std::remove_pointer_t<T>>)
+				store = reinterpret_cast<ptr_function_t>(f);
 			else
-			if constexpr (sizeof(functor_t) > sizeof(small_object_t)) {
+			if constexpr (std::is_pointer_v<T>)
+				store = reinterpret_cast<ptr_object_t>(f);
+			else
+			if constexpr (sizeof(functor_t) > sizeof(small_t)) {
 				store = new control_block_t<functor_t>(std::forward<T>(f));
 			}
 			else {
-				store = storage_small_object_t();
+				store = small_object_t();
 				auto p_store = std::get_if<LOCAL>(&store);
 				new (p_store) functor_t(std::forward<T>(f));
 			}
@@ -214,14 +223,17 @@ namespace signaler::detail {
 
 			using functor_t = typename std::decay<T>::type;
 
-			if constexpr (std::is_pointer_v<T>)
-				store = reinterpret_cast<storage_ptr_object_t>(f);
+			if constexpr (std::is_function_v<std::remove_pointer_t<T>>)
+				store = reinterpret_cast<ptr_function_t>(f);
 			else
-			if constexpr (sizeof(functor_t) > sizeof(small_object_t)) {
+			if constexpr (std::is_pointer_v<T>)
+				store = reinterpret_cast<ptr_object_t>(f);
+			else
+			if constexpr (sizeof(functor_t) > sizeof(small_t)) {
 				store = new control_block_t<functor_t>(std::forward<T>(f));
 			}
 			else {
-				store = storage_small_object_t();
+				store = small_object_t();
 				auto p_store = std::get_if<LOCAL>(&store);
 				new (p_store) functor_t(std::forward<T>(f));
 			}
@@ -235,10 +247,13 @@ namespace signaler::detail {
 
 			using object_t = typename std::decay<T>::type;
 
+			if constexpr (std::is_function_v<std::remove_pointer_t<T>>)
+				return &reinterpret_cast<T>(*std::get_if<POINTER_F>(&store));
+			else
 			if constexpr (std::is_pointer_v<T>) {
 				return &reinterpret_cast<T>(*std::get_if<POINTER>(&store));
 			}
-			else if constexpr (sizeof(object_t) > sizeof(small_object_t)) {
+			else if constexpr (sizeof(object_t) > sizeof(small_t)) {
 				return reinterpret_cast<T*>(&static_cast<control_block_t<object_t>*>(*std::get_if<DYNAMIC>(&store))->payload);
 			}
 			else {
@@ -252,6 +267,9 @@ namespace signaler::detail {
 			if (store.index() == INVALID && r.store.index() == INVALID)
 				return true;
 			else
+			if (store.index() == POINTER_F && r.store.index() == POINTER_F)
+				return (*std::get_if<POINTER_F>(&store) == *std::get_if<POINTER_F>(&r.store));
+			else
 			if (store.index() == POINTER && r.store.index() == POINTER)
 				return (*std::get_if<POINTER>(&store) == *std::get_if<POINTER>(&r.store));
 			else
@@ -260,6 +278,9 @@ namespace signaler::detail {
 
 		bool operator<(storage_t const& r) const {
 
+			if (store.index() == POINTER_F && r.store.index() == POINTER_F)
+				return (*std::get_if<POINTER_F>(&store) < *std::get_if<POINTER_F>(&r.store));
+			else
 			if (store.index() == POINTER && r.store.index() == POINTER)
 				return (*std::get_if<POINTER>(&store) < *std::get_if<POINTER>(&r.store));
 			else
@@ -269,4 +290,4 @@ namespace signaler::detail {
 
 }
 
-#endif  //_STORAGE_
+#endif  // SIGNALER_STORAGE

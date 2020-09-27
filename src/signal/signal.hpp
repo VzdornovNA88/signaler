@@ -29,8 +29,8 @@
   ******************************************************************************
   */
 
-#ifndef _SIGNAL_
-#define _SIGNAL_
+#ifndef SIGNALER_SIGNAL
+#define SIGNALER_SIGNAL
 
 #include "../function/function.hpp"
 #include "detail/id_connection_generator.hpp"
@@ -292,4 +292,4 @@ namespace signaler {
 
 }
 
-#endif  //_SIGNAL_
+#endif  // SIGNALER_SIGNAL
