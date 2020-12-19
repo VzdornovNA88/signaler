@@ -199,11 +199,19 @@ namespace signaler::detail {
 
 			using functor_t = typename std::decay<T>::type;
 
-			if constexpr (std::is_function_v<std::remove_pointer_t<T>>)
-				store = reinterpret_cast<ptr_function_t>(f);
+			if constexpr (std::is_function_v<std::remove_pointer_t<T>>) {
+				store = ptr_function_t();
+				auto p_store = std::get_if<POINTER_F>(&store);
+				new (p_store) functor_t(f);
+			}
 			else
-			if constexpr (std::is_pointer_v<T>)
+			if constexpr (std::is_pointer_v<T>) {
 				store = reinterpret_cast<ptr_object_t>(f);
+
+				store = ptr_object_t();
+				auto p_store = std::get_if<POINTER>(&store);
+				new (p_store) T(f);
+			}
 			else
 			if constexpr (sizeof(functor_t) > sizeof(small_t)) {
 				store = new control_block_t<functor_t>(std::forward<T>(f));
@@ -223,11 +231,17 @@ namespace signaler::detail {
 
 			using functor_t = typename std::decay<T>::type;
 
-			if constexpr (std::is_function_v<std::remove_pointer_t<T>>)
-				store = reinterpret_cast<ptr_function_t>(f);
+			if constexpr (std::is_function_v<std::remove_pointer_t<T>>) {
+				store = ptr_function_t();
+				auto p_store = std::get_if<POINTER_F>(&store);
+				new (p_store) functor_t(f);
+			}
 			else
-			if constexpr (std::is_pointer_v<T>)
-				store = reinterpret_cast<ptr_object_t>(f);
+			if constexpr (std::is_pointer_v<T>) {
+				store = ptr_object_t();
+				auto p_store = std::get_if<POINTER>(&store);
+				new (p_store) T(f);
+			}
 			else
 			if constexpr (sizeof(functor_t) > sizeof(small_t)) {
 				store = new control_block_t<functor_t>(std::forward<T>(f));
@@ -248,16 +262,17 @@ namespace signaler::detail {
 			using object_t = typename std::decay<T>::type;
 
 			if constexpr (std::is_function_v<std::remove_pointer_t<T>>)
-				return &reinterpret_cast<T>(*std::get_if<POINTER_F>(&store));
+				return reinterpret_cast<T>(*std::get_if<POINTER_F>(&store));
 			else
 			if constexpr (std::is_pointer_v<T>) {
-				return &reinterpret_cast<T>(*std::get_if<POINTER>(&store));
+				return std::lounder(reinterpret_cast<T>(*std::get_if<POINTER>(&store)));
 			}
 			else if constexpr (sizeof(object_t) > sizeof(small_t)) {
-				return reinterpret_cast<T*>(&static_cast<control_block_t<object_t>*>(*std::get_if<DYNAMIC>(&store))->payload);
+				return std::lounder(reinterpret_cast<T*>(
+					&static_cast<control_block_t<object_t>*>(*std::get_if<DYNAMIC>(&store))->payload));
 			}
 			else {
-				return reinterpret_cast<T*>(std::get_if<LOCAL>(&store));
+				return std::lounder(reinterpret_cast<T*>(std::get_if<LOCAL>(&store)));
 			}
 		}
 

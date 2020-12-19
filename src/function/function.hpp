@@ -64,13 +64,13 @@ namespace signaler {
 		template < typename T, R(T::*m)(A...) >
 		static R _aplly(detail::storage_t* const s, A&&... args) {
 
-			return ((*s->get<T*>())->*m)(std::forward<A>(args)...);
+			return ((s->get<T*>())->*m)(std::forward<A>(args)...);
 		}
 
 		template < typename T, R(T::*m)(A...) const >
 		static R _aplly(detail::storage_t* const s, A&&... args) {
 
-			return ((*s->get<T const*>())->*m)(std::forward<A>(args)...);
+			return ((s->get<T const*>())->*m)(std::forward<A>(args)...);
 		}
 
 		template <typename T>
