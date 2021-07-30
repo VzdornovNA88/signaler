@@ -1,13 +1,18 @@
-﻿# CMakeList.txt: файл проекта CMake верхнего уровня; проведите глобальную конфигурацию
-# и включите сюда подпроекты.
-#
-cmake_minimum_required (VERSION 3.8)
+﻿cmake_minimum_required (VERSION 3.8)
 
 project (signaler)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -pedantic")
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -pedantic")  # using GCC
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Wall ")
+endif()
 
 set (CMAKE_LIBRARY_OUTPUT_DIRECTORY
         ${PROJECT_BINARY_DIR}/bin
@@ -28,9 +33,12 @@ set (CMAKE_ARCHIVE_OUTPUT_DIRECTORY
     )
 
 enable_testing()
-# Включите подпроекты.
 
-add_subdirectory ("examples")
+add_subdirectory ("examples/function")
+add_subdirectory ("examples/signal")
+add_subdirectory ("examples/signal_ping_pong")
+
+add_subdirectory ("benchmarks/signal")
+
 add_subdirectory ("tests/functions")
 add_subdirectory ("tests/signals")
-
