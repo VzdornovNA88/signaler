@@ -2,10 +2,6 @@ cmake_minimum_required(VERSION 3.8)
 
 project(signaler-function-test)
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
-
 set(GTEST_SOURCE_DIR "" CACHE PATH "Path to Google Test sources")
 set(GTEST_WORKING_DIR "${CMAKE_BINARY_DIR}/googletest")
 
