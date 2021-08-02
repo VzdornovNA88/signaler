@@ -10,6 +10,7 @@
 .cache/clangd/index/signal_test.cpp.DAD7227D7382470E.idx
 .cache/clangd/index/signal.hpp.BCDEF9E9753C98BD.idx
 .cache/clangd/index/storage.hpp.E6C4439E14C48DE7.idx
+build/
 build/cmake_install.cmake
 build/CMakeCache.txt
 build/compile_commands.json
