@@ -39,6 +39,7 @@
 #include "detail/id_connection_generator.hpp"
 
 #include <algorithm>
+#include <iterator>
 #include <memory>
 #include <tuple>
 #include <type_traits>
@@ -98,6 +99,7 @@ private:
     friend class signal_t<R(A...)>;
 
     result_t<T> status_{signal_status_t::S_CONNECTION_FAILED};
+    bool is_connected{false};
 
   protected:
     virtual void set(result_t<T> v_) noexcept { status_ = v_; };
@@ -185,6 +187,7 @@ private:
           result_ = std::make_shared<future_t<R>>();
       }
 
+      result_->is_connected = true;
       result_->status_ = signal_status_t::S_READY;
     }
 
@@ -213,8 +216,12 @@ private:
 
       return (id_ == r.id_);
     }
+
+    detail::id_t__::id_type_internal id() const noexcept { return id_; }
   };
 
+  using container_connections_t = std::vector<private_connection_t>;
+  
 public:
   class connection_t {
     detail::id_t__::id_type_internal id_ = 0;
@@ -231,9 +238,13 @@ public:
   public:
     connection_t() noexcept = default;
     connection_t(connection_t &&con_) noexcept = default;
-    connection_t(const connection_t &con_) noexcept = default;
+    connection_t(const connection_t &con_) noexcept = delete;
     connection_t &operator=(connection_t &&other) noexcept = default;
-    connection_t &operator=(const connection_t &other) noexcept = default;
+    connection_t &operator=(const connection_t &other) noexcept = delete;
+
+    ~connection_t() {
+      disconnect();
+    }
 
     [[nodiscard]] auto get_result() const noexcept -> result_t<R> {
 
@@ -241,6 +252,15 @@ public:
         return p_future_->get();
       else
         return {signal_status_t::S_CONNECTION_FAILED};
+    }
+
+    bool is_connected() const noexcept {
+      return !future_.expired();
+    }
+
+    void disconnect() noexcept {
+      if (auto p_future_ = future_.lock())
+        p_future_->is_connected = false;
     }
 
     bool operator<(connection_t const &r) const noexcept {
@@ -439,9 +459,19 @@ public:
 
   void disconnect() { connections_.clear(); }
 
-  void operator()(A... p) const noexcept {
+  void operator()(A... p) noexcept {
 
-    for (const auto &connection_ : connections_) {
+    auto begin_ = std::begin(connections_) ;
+    auto end_ = std::end(connections_)  ;
+
+    for ( ; begin_ != end_; ++begin_) {
+
+      const auto &connection_  = *begin_;
+
+      if(connection_.result_ && !connection_.result_->is_connected) {
+        connections_.erase(begin_);
+        continue;
+      }
 
       if (auto ctx_ = connection_.ctx_) {
 
@@ -505,7 +535,7 @@ public:
   }
 
 private:
-  std::vector<private_connection_t> connections_;
+  container_connections_t connections_;
 };
 
 } // namespace signaler

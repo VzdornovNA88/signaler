@@ -45,7 +45,7 @@ public:
   bool operator==(const id_t__ &r_) const noexcept { return (id_ == r_.id_); }
 
   bool operator<(const id_t__ &r_) const noexcept { return (id_ < r_.id_); }
-  operator id_type_internal() noexcept { return id_; }
+  operator id_type_internal() const noexcept { return id_; }
 
   friend constexpr bool operator==(const id_t__ &,
                                    const id_t__::id_type_internal &) noexcept;
