@@ -33,42 +33,41 @@
 #define SIGNALER_QUEUE_T_HPP
 
 #include "../../../function/function.hpp"
-#include "../../../platforms/platforms_defined.hpp"
 #include "queue_traits.hpp"
 
 
-#ifdef SIGNALER_STD
-#include "platforms/std_queue.hpp"
-#elif defined SIGNALER_FREE_RTOS
-#include "platforms/free_rtos_queue.hpp"
+#ifdef SIGNALER_FREE_RTOS
+  #include "platforms/free_rtos_queue.hpp"
+#else
+  #include "platforms/std_queue.hpp"
 #endif
 
 namespace signaler::detail {
 
 using event_t =
-#ifdef SIGNALER_STD
-    typename signaler::function_t<void(), 128>;
-#elif defined SIGNALER_FREE_RTOS
+#ifdef SIGNALER_FREE_RTOS
     typename signaler::function_t<void(), 32>;
+#else
+    typename signaler::function_t<void(), 128>;
 #endif
 
 template <size_t queue_lenght = 8>
 using event_queue_t =
-#ifdef SIGNALER_STD
-    typename require_queue_concept_for<
-        std_queue_t<event_t, queue_lenght>>::queue_t;
-#elif defined SIGNALER_FREE_RTOS
+#ifdef SIGNALER_FREE_RTOS
     typename require_queue_concept_for<
         free_rtos_queue_t<event_t, queue_lenght>>::queue_t;
+#else
+    typename require_queue_concept_for<
+        std_queue_t<event_t, queue_lenght>>::queue_t;
 #endif
 
 template <typename T, size_t queue_lenght = 8>
 using queue_t =
-#ifdef SIGNALER_STD
-    typename require_queue_concept_for<std_queue_t<T, queue_lenght>>::queue_t;
-#elif defined SIGNALER_FREE_RTOS
+#ifdef SIGNALER_FREE_RTOS
     typename require_queue_concept_for<
         free_rtos_queue_t<T, queue_lenght>>::queue_t;
+#else
+    typename require_queue_concept_for<std_queue_t<T, queue_lenght>>::queue_t;
 #endif
 
 } // namespace signaler::detail
