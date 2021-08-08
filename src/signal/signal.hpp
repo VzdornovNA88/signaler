@@ -248,7 +248,7 @@ public:
 
     [[nodiscard]] auto get_result() const noexcept -> result_t<R> {
 
-      if (auto p_future_ = future_.lock())
+      if (auto p_future_ = future_.lock() ; p_future_ && p_future_->is_connected)
         return p_future_->get();
       else
         return {signal_status_t::S_CONNECTION_FAILED};
