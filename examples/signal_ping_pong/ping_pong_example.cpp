@@ -18,10 +18,14 @@ struct ping_t : object_ping_t {
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
+    if(!connection.is_connected())
+      std::cout << "ping is disconnected" << std::endl;
+
     signal(i);
   }
 
   signal_t<void(int &)> signal;
+  signal_t<void(int &)>::connection_t connection;
 };
 
 signaler::context_t<> context_pong;
@@ -38,15 +42,19 @@ struct pong_t : object_pong_t {
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
+    if(!connection.is_connected())
+      std::cout << "pong is disconnected" << std::endl;
+
     signal(i);
   }
 
   signal_t<void(int &)> signal;
+  signal_t<void(int &)>::connection_t connection;
 };
 
 int ping_pong_state = 0;
 
-int main(int argc, char *argv[]) {
+int main([[maybe_unused]]int argc, [[maybe_unused]]char *argv[]) {
   std::cout << "Begine example 'ping pong with signal/slot connections' : "
             << std::endl;
 
@@ -63,8 +71,8 @@ int main(int argc, char *argv[]) {
   ping_t ping;
   pong_t pong;
 
-  ping.signal.connect(&pong);
-  pong.signal.connect(&ping);
+  ping.connection = ping.signal.connect(&pong);
+  pong.connection = pong.signal.connect(&ping);
 
   signal_t<void(int &)> start;
 

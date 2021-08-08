@@ -43,7 +43,7 @@ struct B {
 	B(int b_) : b__(b_) {};
 	B() noexcept {};
 
-	B& operator = (const B& s) noexcept {
+	B& operator = ([[maybe_unused]]const B& s) noexcept {
 
 		std::cout << "-----------------------> B& operator = (const B& s) noexcept: " << std::endl;
 
@@ -80,7 +80,7 @@ struct B {
 void foo(std::string_view s)
 {
 	std::cout << "void foo(std::string_view s): " << s.data() << " ; in thread id: " << std::this_thread::get_id() << std::endl;
-};
+}
 
 
 struct class_example_1 {
@@ -138,7 +138,7 @@ struct class_example_2 : object_in_worker_thread_t/*signaler::object_t<&context_
 	}
 };
 
-int main(int argc, char* argv[])
+int main([[maybe_unused]]int argc, [[maybe_unused]]char* argv[])
 {
 	std::cout << "Begine examples : " << std::endl;
 
@@ -166,18 +166,7 @@ int main(int argc, char* argv[])
 
 	std::cout << std::endl;
 
-	std::cout << "3. Creating temp object of connection of signal ---> auto temp_connection_foo_string_1 = connection_foo_string_1;" << std::endl;
-	auto temp_connection_foo_string_1 = connection_foo_string_1;
-
-	std::cout << std::endl;
-
-	std::cout << "4. Compare temp connection with connection" << std::endl;
-	if(temp_connection_foo_string_1 == connection_foo_string_1)
-		std::cout << "temp connection of foo_string_1 is the same as connection of this signal" << std::endl;
-
-	std::cout << std::endl;
-
-	std::cout << "5. Compare other connection with the same slot as initial connection" << std::endl;
+	std::cout << "3. Compare other connection with the same slot as initial connection" << std::endl;
 
 	auto other_connection_foo_string_1 = foo_string_1.connect<foo>();
 
@@ -186,7 +175,7 @@ int main(int argc, char* argv[])
 
 	std::cout << std::endl;
 
-	std::cout << "6. Compare connection from other signal with the same slot as initial connection" << std::endl;
+	std::cout << "4. Compare connection from other signal with the same slot as initial connection" << std::endl;
 
 	signal_t<void(std::string_view)> foo_string_2;
 	auto connection_foo_string_2 = foo_string_2.connect<foo>();
@@ -194,7 +183,7 @@ int main(int argc, char* argv[])
 	if (connection_foo_string_2 != connection_foo_string_1)
 		std::cout << "connection of foo_string_2 is not equal connection of foo_string_1 with the same slot" << std::endl;
 
-	std::cout << "7. Disconnect connection from foo_string_2 signal" << std::endl;
+	std::cout << "5. Disconnect connection from foo_string_2 signal" << std::endl;
 
 	foo_string_2.disconnect<foo>();
 
@@ -223,18 +212,7 @@ int main(int argc, char* argv[])
 
 	std::cout << std::endl;
 
-	std::cout << "3. Creating temp object of connection of signal ---> auto temp_connection_foo_string_3 = connection_foo_string_3;" << std::endl;
-	auto temp_connection_foo_string_3 = connection_foo_string_3;
-
-	std::cout << std::endl;
-
-	std::cout << "4. Compare temp connection with connection" << std::endl;
-	if (temp_connection_foo_string_3 == connection_foo_string_3)
-		std::cout << "temp connection of foo_string_3 is the same as connection of this signal" << std::endl;
-
-	std::cout << std::endl;
-
-	std::cout << "5. Compare other connection with the same slot as initial connection" << std::endl;
+	std::cout << "3. Compare other connection with the same slot as initial connection" << std::endl;
 
 	auto other_connection_foo_string_3 = foo_string_3.connect<class_example_1, &class_example_1::foo>(&obj_example_1);
 
@@ -243,7 +221,7 @@ int main(int argc, char* argv[])
 
 	std::cout << std::endl;
 
-	std::cout << "6. Compare connection from other signal with the same slot as initial connection" << std::endl;
+	std::cout << "4. Compare connection from other signal with the same slot as initial connection" << std::endl;
 
 	signal_t<void(std::string_view)> foo_string_4;
 	auto connection_foo_string_4 = foo_string_4.connect<class_example_1, &class_example_1::foo>(&obj_example_1);
@@ -251,7 +229,7 @@ int main(int argc, char* argv[])
 	if (connection_foo_string_4 != connection_foo_string_3)
 		std::cout << "connection of foo_string_4 is not equal connection of foo_string_3 with the same slot" << std::endl;
 
-	std::cout << "7. Disconnect connection from foo_string_4 signal" << std::endl;
+	std::cout << "5. Disconnect connection from foo_string_4 signal" << std::endl;
 
 	foo_string_4.disconnect<class_example_1, &class_example_1::foo>(&obj_example_1);
 
@@ -280,18 +258,7 @@ int main(int argc, char* argv[])
 
 	std::cout << std::endl;
 
-	std::cout << "3. Creating temp object of connection of signal ---> auto temp_connection_foo_string_5 = connection_foo_string_5;" << std::endl;
-	auto temp_connection_foo_string_5 = connection_foo_string_5;
-
-	std::cout << std::endl;
-
-	std::cout << "4. Compare temp connection with connection" << std::endl;
-	if (temp_connection_foo_string_5 == connection_foo_string_5)
-		std::cout << "temp connection of foo_string_5 is the same as connection of this signal" << std::endl;
-
-	std::cout << std::endl;
-
-	std::cout << "5. Compare other connection with the same slot as initial connection" << std::endl;
+	std::cout << "3. Compare other connection with the same slot as initial connection" << std::endl;
 
 	auto other_connection_foo_string_5 = foo_string_5.connect<class_example_1, &class_example_1::foo_const>(&obj_example_2);
 
@@ -300,7 +267,7 @@ int main(int argc, char* argv[])
 
 	std::cout << std::endl;
 
-	std::cout << "6. Compare connection from other signal with the same slot as initial connection" << std::endl;
+	std::cout << "4. Compare connection from other signal with the same slot as initial connection" << std::endl;
 
 	signal_t<void(std::string_view)> foo_string_6;
 	auto connection_foo_string_6 = foo_string_6.connect<class_example_1, &class_example_1::foo_const>(&obj_example_2);
@@ -308,7 +275,7 @@ int main(int argc, char* argv[])
 	if (connection_foo_string_6 != connection_foo_string_5)
 		std::cout << "connection of foo_string_6 is not equal connection of foo_string_5 with the same slot" << std::endl;
 
-	std::cout << "7. Disconnect connection from foo_string_6 signal" << std::endl;
+	std::cout << "5. Disconnect connection from foo_string_6 signal" << std::endl;
 
 	foo_string_6.disconnect<class_example_1, &class_example_1::foo_const>(&obj_example_2);
 
@@ -337,18 +304,7 @@ int main(int argc, char* argv[])
 
 	std::cout << std::endl;
 
-	std::cout << "3. Creating temp object of connection of signal ---> auto temp_connection_foo_string_7 = connection_foo_string_7;" << std::endl;
-	auto temp_connection_foo_string_7 = connection_foo_string_7;
-
-	std::cout << std::endl;
-
-	std::cout << "4. Compare temp connection with connection" << std::endl;
-	if (temp_connection_foo_string_7 == connection_foo_string_7)
-		std::cout << "temp connection of foo_string_7 is the same as connection of this signal" << std::endl;
-
-	std::cout << std::endl;
-
-	std::cout << "5. Compare other connection with the same slot as initial connection" << std::endl;
+	std::cout << "3. Compare other connection with the same slot as initial connection" << std::endl;
 
 	auto other_connection_foo_string_7 = foo_string_7.connect([](std::string_view s) {
 		foo(s);
@@ -359,7 +315,7 @@ int main(int argc, char* argv[])
 
 	std::cout << std::endl;
 
-	std::cout << "6. Compare connection from other signal with the same slot as initial connection" << std::endl;
+	std::cout << "4. Compare connection from other signal with the same slot as initial connection" << std::endl;
 
 	signal_t<void(std::string_view)> foo_string_8;
 	auto connection_foo_string_8 = foo_string_8.connect([](std::string_view s) {
@@ -369,7 +325,7 @@ int main(int argc, char* argv[])
 	if (connection_foo_string_8 != connection_foo_string_7)
 		std::cout << "connection of foo_string_8 is not equal connection of foo_string_7 with the same slot" << std::endl;
 
-	std::cout << "7. Disconnect connection from foo_string_8 signal" << std::endl;
+	std::cout << "5. Disconnect connection from foo_string_8 signal" << std::endl;
 
 	foo_string_8.disconnect(connection_foo_string_8);
 
@@ -424,11 +380,11 @@ int main(int argc, char* argv[])
 	// initialized by lambda expression without context
 	signal_t<void(std::string_view)> foo_string_10_4;
 
-	foo_string_10  .connect(foo_string_10_1);
-	foo_string_10_1.connect(foo_string_10_2);
-	foo_string_10_2.connect(foo_string_10_3);
-	foo_string_10_3.connect(foo_string_10_4);
-	foo_string_10_4.connect([](std::string_view s) {
+	auto con_foo_string_10   = foo_string_10  .connect(foo_string_10_1);
+	auto con_foo_string_10_1 = foo_string_10_1.connect(foo_string_10_2);
+	auto con_foo_string_10_2 = foo_string_10_2.connect(foo_string_10_3);
+	auto con_foo_string_10_3 = foo_string_10_3.connect(foo_string_10_4);
+	auto con_foo_string_10_4 = foo_string_10_4.connect([](std::string_view s) {
 		foo(s);
 	});
 
@@ -494,17 +450,17 @@ int main(int argc, char* argv[])
 
 	std::cout << "---------------------------------------------------------------" << std::endl;
 
-	std::cout << "7. connect to signal like a class mamber." << std::endl;
+	std::cout << "7. connect to signal like a class member." << std::endl;
 
 	std::cout << std::endl;
 
 	A a;
 
-	a.signal.connect([](std::string_view s) {
+	auto con_signal_of_A = a.signal.connect([](std::string_view s) {
 		foo(s);
 	});
 
-	foo_string_10.connect(&a, a.signal);
+	auto con_foo_string_10_to_A =  foo_string_10.connect(&a, a.signal);
 
 	foo_string_10("signal { 'foo_string_10 -> signal like a class member'; '[](std::string_view s) {foo(s);}' }");
 
@@ -559,7 +515,7 @@ int main(int argc, char* argv[])
 	std::cout << "---------------------------------------------------------------" << std::endl;
 
 	signal_t<void(int&)> foo_int_ref_1;
-	foo_int_ref_1.connect<class_example_2, &class_example_2::foo_int_ref>(&obj_example_3);
+	auto connection_foo_int_ref_1 = foo_int_ref_1.connect<class_example_2, &class_example_2::foo_int_ref>(&obj_example_3);
 	int I = 1;
 	foo_int_ref_1(I);
 
@@ -575,7 +531,7 @@ int main(int argc, char* argv[])
 	std::cout << "---------------------------------------------------------------" << std::endl;
 
 	signal_t<void(B)> foo_B_1;
-	foo_B_1.connect<class_example_2, &class_example_2::foo_B>(&obj_example_3);
+	auto connection_foo_B_1 = foo_B_1.connect<class_example_2, &class_example_2::foo_B>(&obj_example_3);
 	B b{1};
 	foo_B_1(std::move(b));
 
