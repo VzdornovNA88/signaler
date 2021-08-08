@@ -297,7 +297,7 @@ public:
     return *this;
   }
 
-  template <typename T, R (T::*m)(A...)> connection_t connect(T *o) {
+  template <typename T, R (T::*m)(A...)> [[nodiscard]] connection_t connect(T *o) {
 
     auto slot_ = function_t<R(A...)>::template bind<T, m>(o);
 
@@ -330,7 +330,7 @@ public:
       connections_.erase(it);
   }
 
-  template <typename T, R (T::*m)(A...) const> connection_t connect(T *o) {
+  template <typename T, R (T::*m)(A...) const> [[nodiscard]] connection_t connect(T *o) {
 
     auto slot_ = function_t<R(A...)>::template bind<T, m>(o);
 
@@ -363,7 +363,7 @@ public:
       connections_.erase(it);
   }
 
-  template <R (*f)(A...)> connection_t connect() {
+  template <R (*f)(A...)> [[nodiscard]] connection_t connect() {
 
     auto slot_ = function_t<R(A...)>::template bind<f>();
 
@@ -412,14 +412,14 @@ public:
     return connections_.emplace_back(ctx_, std::move(slot_));
   }
 
-  connection_t connect(signal_t &signal) {
+  [[nodiscard]] connection_t connect(signal_t &signal) {
     static_assert(std::is_same<R, void>::value,
                   "Return value of signal must be only 'void' type");
 
     return connect<signal_t, &signal_t::operator()>(&signal);
   }
 
-  template <typename T> connection_t connect([[maybe_unused]] T *o, signal_t &signal) {
+  template <typename T> [[nodiscard]] connection_t connect([[maybe_unused]] T *o, signal_t &signal) {
     static_assert(std::is_same<R, void>::value,
                   "Return value of signal must be only 'void' type !");
 
