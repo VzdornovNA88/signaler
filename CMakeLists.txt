@@ -39,6 +39,7 @@ add_subdirectory ("examples/signal")
 add_subdirectory ("examples/signal_ping_pong")
 
 add_subdirectory ("benchmarks/signal")
+add_subdirectory ("benchmarks/google/signal")
 
 add_subdirectory ("tests/functions")
 add_subdirectory ("tests/signals")
