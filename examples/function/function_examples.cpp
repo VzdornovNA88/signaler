@@ -42,7 +42,7 @@ struct B {
 	B(int b_) : b__(b_) {};
 	B() noexcept {};
 
-	B& operator = (const B& s) noexcept {
+	B& operator = ([[maybe_unused]]const B& s) noexcept {
 
 		std::cout << "-----------------------> B& operator = (const B& s) noexcept: " << std::endl;
 
@@ -102,7 +102,7 @@ struct class_example_1 {
 	}
 };
 
-int main(int argc, char* argv[])
+int main([[maybe_unused]]int argc, [[maybe_unused]]char* argv[])
 {
 	std::cout << "Begine examples : " << std::endl;
 
