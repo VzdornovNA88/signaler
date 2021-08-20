@@ -481,16 +481,15 @@ public:
         if constexpr (sizeof...(p) > 0) {
 
           detail::event_t ev_(
-              [args_ = std::make_tuple(std::forward<arg_t<A>>(
-                   arg_t<A>{std::forward<A>(p)})...), // here we don't have RVO
+              [args_ = std::make_tuple(arg_t<A>{std::forward<A>(p)}...), // here we don't have RVO
                slot_ = connection_.slot_,
                result_weak_ = result_weak_]() mutable {
                 if (auto result_ = result_weak_.lock()) {
                   if constexpr (std::is_same_v<R, void>)
-                    slot_(std::move(std::get<arg_t<A>>(args_)...));
+                    slot_(std::get<arg_t<A>>(args_)...);
                   else {
                     result_->set(
-                        slot_(std::move(std::get<arg_t<A>>(args_)...)).value());
+                        slot_(std::get<arg_t<A>>(args_)...).value());
                   }
                 }
               });
