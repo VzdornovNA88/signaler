@@ -64,10 +64,9 @@ std::string signal_status_category_t::message(int s_) const {
   case signaler::signal_status_t::S_SLOT_QUEUE_ERROR_LOCK:
     return "ERROR in signaler - locking input queue of remote context for slot "
            "is failed";
-
-  default:
-    return "ERROR in signaler - FATAL ERROR (unrecognized status for signal_t)";
   }
+
+  return "ERROR in signaler - FATAL ERROR (unrecognized status for signal_t)";
 }
 
 const signal_status_category_t category__{};

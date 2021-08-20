@@ -61,11 +61,10 @@ std::string queue_status_category_t::message(int s_) const {
   case signaler::detail::queue_status_t::Q_IS_EMPTY_LOCK_ERROR:
     return "ERROR from signaler - The queue lock failed with an error in "
            "'empty' function";
-
-  default:
-    return "ERROR in signaler - FATAL ERROR (unrecognized status for inter "
-           "context queue)";
   }
+
+  return "ERROR in signaler - FATAL ERROR (unrecognized status for inter "
+           "context queue)";
 }
 
 const queue_status_category_t category__{};

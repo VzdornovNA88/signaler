@@ -50,11 +50,10 @@ std::string function_status_category_t::message(int s_) const {
   case signaler::function_status_t::F_CALL_FAILED_FUNCTION_IS_NOT_INITIALIZED:
     return "ERROR in signaler - function call is failed, function is not "
            "initialized !";
-
-  default:
-    return "ERROR in signaler - FATAL ERROR (unrecognized status for "
-           "function_t)";
   }
+
+  return "ERROR in signaler - FATAL ERROR (unrecognized status for "
+           "function_t)";
 }
 
 const function_status_category_t category__{};
