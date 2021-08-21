@@ -130,10 +130,24 @@ struct class_example_2 : object_in_worker_thread_t/*signaler::object_t<&context_
 			<< " in thread id: " << std::this_thread::get_id();
 	}
 
+	void foo_B_by_lvref(B& b)
+	{
+		auto res = b(2);
+		std::cout << "{ 'void class_example_2::void foo_B(B& b)' } : input parameter = " << res
+			<< " in thread id: " << std::this_thread::get_id();
+	}
+
 	void foo_B(B b)
 	{
 		auto res = b(2);
 		std::cout << "{ 'void class_example_2::void foo_B(B b)' } : input parameter = " << res
+			<< " in thread id: " << std::this_thread::get_id();
+	}
+
+	void foo_B_by_rvref(B&& b)
+	{
+		auto res = b(2);
+		std::cout << "{ 'void class_example_2::void foo_B(B&& b)' } : input parameter = " << res
 			<< " in thread id: " << std::this_thread::get_id();
 	}
 };
@@ -532,8 +546,18 @@ int main([[maybe_unused]]int argc, [[maybe_unused]]char* argv[])
 
 	signal_t<void(B)> foo_B_1;
 	auto connection_foo_B_1 = foo_B_1.connect<class_example_2, &class_example_2::foo_B>(&obj_example_3);
-	B b{1};
-	foo_B_1(std::move(b));
+	B b1{1};
+	foo_B_1(/*std::move(*/b1/*)*/);
+
+	signal_t<void(B&)> foo_B_1_lvref;
+	auto connection_foo_B_lvref = foo_B_1_lvref.connect<class_example_2, &class_example_2::foo_B_by_lvref>(&obj_example_3);
+	B b2{1};
+	foo_B_1_lvref(b2);
+
+	signal_t<void(B&&)> foo_B_1_rvref;
+	auto connection_foo_B_rvref = foo_B_1_rvref.connect<class_example_2, &class_example_2::foo_B_by_rvref>(&obj_example_3);
+	B b3{1};
+	foo_B_1_rvref(std::move(b3));
 
 	std::this_thread::sleep_for(std::chrono::seconds(10));
 
