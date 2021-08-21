@@ -86,9 +86,9 @@ private:
   static_assert(check_t__<(std::is_nothrow_move_constructible<A>::value && ...)>::value,
                 "The type T does not satisfy "
                 "is_nothrow_move_constructible as argument of signal");
-  static_assert(check_t__<(std::is_nothrow_copy_constructible<A>::value && ...)>::value,
+  static_assert(check_t__<((std::is_rvalue_reference_v<A> || std::is_nothrow_copy_constructible<A>::value) && ...)>::value,
                 "The type T does not satisfy "
-                "is_nothrow_move_assignable as argument of signal");
+                "is_nothrow_copy_constructible as argument of signal");
 
   template <typename T> struct arg_t {
     T arg;

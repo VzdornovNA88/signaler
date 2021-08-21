@@ -70,9 +70,9 @@ class function_t<R(A...), SMALL_OPT_SIZE> final {
   static_assert(check_t__<(std::is_nothrow_move_constructible<A>::value && ...)>::value ,
                 "The type T does not satisfy "
                 "is_nothrow_move_constructible as argument of function_t");
-  static_assert(check_t__<(std::is_nothrow_copy_constructible<A>::value && ...)>::value,
+  static_assert(check_t__<((std::is_rvalue_reference_v<A> || std::is_nothrow_copy_constructible<A>::value) && ...)>::value,
                 "The type T does not satisfy "
-                "is_nothrow_move_assignable as argument of function_t");
+                "is_nothrow_copy_constructible as argument of function_t");
 
   using wraper_t = result_t<R> (*)(detail::storage_t<SMALL_OPT_SIZE> *const,
                                    A &&...) noexcept;
