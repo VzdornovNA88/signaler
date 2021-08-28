@@ -255,7 +255,10 @@ public:
     }
 
     bool is_connected() const noexcept {
-      return !future_.expired();
+      if (auto p_future_ = future_.lock())
+        return p_future_->is_connected;
+      else
+        return false;
     }
 
     void disconnect() noexcept {
