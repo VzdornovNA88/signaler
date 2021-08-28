@@ -229,3 +229,20 @@ void benchmark_connecting_signal_to_lambda_with_context(benchmark::State& state)
 }
 
 BENCHMARK(benchmark_connecting_signal_to_lambda_with_context)->UseRealTime();
+
+
+void benchmark_is_connected_signal_to_lambda_with_context(benchmark::State& state) noexcept {
+
+  signal_t<void(unsigned int &)> signal;
+  signal_t<void(unsigned int &)>::connection_t connection {
+
+    signal.connect([state](unsigned int &val) { ++val; })
+  };
+
+  for (auto _ : state) {
+    connection.is_connected();
+    benchmark::ClobberMemory();
+  }
+}
+
+BENCHMARK(benchmark_is_connected_signal_to_lambda_with_context)->UseRealTime();
