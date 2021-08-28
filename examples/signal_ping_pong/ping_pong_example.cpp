@@ -1,7 +1,9 @@
+#include <chrono>
 #include <iostream>
 #include <signal.hpp>
 #include <thread>
 
+using namespace std::chrono;
 using namespace signaler;
 
 signaler::context_t<> context_ping;
@@ -11,12 +13,13 @@ struct ping_t : object_ping_t {
 
   void operator()(int &i) {
     std::cout << "{ PING 'void ping_t::foo(int i)' } : ++i = " << ++i
+              << " time: " << duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count()
               << " in thread id: " << std::this_thread::get_id();
 
     std::cout << std::endl;
     std::cout << std::endl;
 
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     if(!connection.is_connected())
       std::cout << "ping is disconnected" << std::endl;
@@ -35,12 +38,13 @@ struct pong_t : object_pong_t {
 
   void operator()(int &i) {
     std::cout << "{ PONG 'void pong_t::foo(int i)' } : ++i = " << ++i
+              << " time: " << duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count()
               << " in thread id: " << std::this_thread::get_id();
 
     std::cout << std::endl;
     std::cout << std::endl;
 
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     if(!connection.is_connected())
       std::cout << "pong is disconnected" << std::endl;
