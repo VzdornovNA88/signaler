@@ -28,7 +28,7 @@ struct A
 	void foo1(int a) const
 	{
 		std::cout << "method got const: " << a << std::endl;
-		func(a + 1);
+		//func(a + 1);
 	}
 
 	function_t<void(int)> func = function_t<void(int)>::bind<A, &A::foo>(this);
@@ -83,7 +83,7 @@ void foo(std::string_view s)
 }
 
 
-struct class_example_1 {
+/*struct class_example_1 {
 
 	std::string_view class_ctx{ " / here is class context" };
 
@@ -97,12 +97,81 @@ struct class_example_1 {
 		std::cout << "void class_example_1::foo(std::string_view s) const: " << s.data() << class_ctx.data() << std::endl;
 	}
 
-	void foo_int_ref(int& i)
+	void foo_int_inc_by_ref(int& i)
+	{
+		std::cout << "void class_example_1::foo_int_ref(int& i): " << ++i << std::endl;
+	}
+};*/
+
+
+struct class_example_1 {
+
+    static inline constexpr char ctx [] = " / here is class context" ;
+
+	std::string_view class_ctx{ctx};
+
+    void foo_for_std_bind(std::string_view s)
+	{
+		std::cout << "void class_example_1::foo(std::string_view s): " << s.data() << class_ctx.data() << std::endl;
+	}
+
+	void foo(std::string_view s)
+	{
+		std::cout << "void class_example_1::foo(std::string_view s): " << s.data() << class_ctx.data() << std::endl;
+	}
+
+    void foo(std::string_view s) const
+	{
+		std::cout << "void class_example_1::foo(std::string_view s) const : " << s.data() << class_ctx.data() << std::endl;
+	}
+
+	void foo(std::string_view s) const volatile
+	{
+		std::cout << "void class_example_1::foo(std::string_view s) const volatile : " << s.data() << ctx << std::endl;
+	}
+
+	void foo_const_lvalue_ref_qualifier_noexcept(std::string_view s) const& noexcept
+	{
+		std::cout << "void class_example_1::foo(std::string_view s) const& volatile noexcept: " << s.data() << ctx << std::endl;
+	}
+
+	void foo_lvalue_ref_qualifier_noexcept(std::string_view s) & noexcept
+	{
+		std::cout << "void class_example_1::foo(std::string_view s) & noexcept : " << s.data() << ctx << std::endl;
+	}
+
+	void foo_rvalue_ref_qualifier_noexcept(std::string_view s) && noexcept
+	{
+		std::cout << "void class_example_1::foo(std::string_view s) && noexcept : " << s.data() << ctx << std::endl;
+	}
+
+	void foo_const_lvalue_ref_qualifier(std::string_view s) const&
+	{
+		std::cout << "void class_example_1::foo(std::string_view s) const& : " << s.data() << ctx << std::endl;
+	}
+
+	void foo_lvalue_ref_qualifier(std::string_view s) &
+	{
+		std::cout << "void class_example_1::foo(std::string_view s) & : " << s.data() << ctx << std::endl;
+	}
+
+	void foo_rvalue_ref_qualifier(std::string_view s) &&
+	{
+		std::cout << "void class_example_1::foo(std::string_view s) && : " << s.data() << ctx << std::endl;
+	}
+
+
+
+	void foo_const(std::string_view s) const
+	{
+		std::cout << "void class_example_1::foo(std::string_view s) const: " << s.data() << class_ctx.data() << std::endl;
+	}
+
+	void foo_int_inc_by_ref(int& i)
 	{
 		std::cout << "void class_example_1::foo_int_ref(int& i): " << ++i << std::endl;
 	}
 };
-
 
 
 signaler::context_t<> context_worker_thread;
@@ -251,6 +320,35 @@ int main([[maybe_unused]]int argc, [[maybe_unused]]char* argv[])
 
 	std::cout << std::endl;
 
+    signal_t<void(std::string_view)&> foo_string_4_1;
+	auto connection_foo_string_4_1 = foo_string_4_1.connect<class_example_1, &class_example_1::foo_lvalue_ref_qualifier>(&obj_example_1);
+
+	foo_string_4_1("1. signal { 'foo_string_4_1' ; 'class_example_1::foo_lvalue_ref_qualifier &' } signal_t connect to class function (conection created by static connect)");
+
+	std::cout << std::endl;
+
+	signal_t<void(std::string_view)& noexcept> foo_string_4_2;
+	auto connection_foo_string_4_2 = foo_string_4_2.connect<class_example_1, &class_example_1::foo_lvalue_ref_qualifier_noexcept>(&obj_example_1);
+
+	foo_string_4_2("1. signal { 'foo_string_4_2' ; 'class_example_1::foo_lvalue_ref_qualifier_noexcept & noexcept' } signal_t connect to class function (conection created by static connect)");
+
+	std::cout << std::endl;
+
+	//! signal_t<void(std::string_view)&& > foo_string_4_3;
+	//! auto connection_foo_string_4_3 = foo_string_4_3.connect<class_example_1, &class_example_1::foo_rvalue_ref_qualifier>(&obj_example_1);
+
+	//! foo_string_4_3("1. signal { 'foo_string_4_3' ; 'class_example_1::foo_rvalue_ref_qualifier &&' } signal_t connect to class function (conection created by static connect)");
+
+	//! std::cout << std::endl;
+
+	//! signal_t<void(std::string_view)&& noexcept> foo_string_4_4;
+	//! auto connection_foo_string_4_4 = foo_string_4_4.connect<class_example_1, &class_example_1::foo_rvalue_ref_qualifier_noexcept>(&obj_example_1);
+
+	//! foo_string_4_4("1. signal { 'foo_string_4_4' ; 'class_example_1::foo_rvalue_ref_qualifier_noexcept && noexcept' } signal_t connect to class function (conection created by static connect)");
+
+	//! std::cout << std::endl;
+
+
 	std::cout << "---------------------------------------------------------------------" << std::endl;
 	std::cout << "--------------- Creating from class const member --------------------" << std::endl;
 	std::cout << "---------------------------------------------------------------------" << std::endl;
@@ -259,7 +357,7 @@ int main([[maybe_unused]]int argc, [[maybe_unused]]char* argv[])
 
 	class_example_1 obj_example_2;
 
-	signal_t<void(std::string_view)> foo_string_5;
+	signal_t<void(std::string_view) const> foo_string_5;
 	auto connection_foo_string_5 = foo_string_5.connect<class_example_1, &class_example_1::foo_const>(&obj_example_2);
 
 	foo_string_5("1. signal { 'foo_string_5' ; 'class_example_1::foo_const' } signal_t connect to class const function (conection created by static connect)");
@@ -283,7 +381,7 @@ int main([[maybe_unused]]int argc, [[maybe_unused]]char* argv[])
 
 	std::cout << "4. Compare connection from other signal with the same slot as initial connection" << std::endl;
 
-	signal_t<void(std::string_view)> foo_string_6;
+	signal_t<void(std::string_view)const> foo_string_6;
 	auto connection_foo_string_6 = foo_string_6.connect<class_example_1, &class_example_1::foo_const>(&obj_example_2);
 
 	if (connection_foo_string_6 != connection_foo_string_5)
@@ -296,6 +394,35 @@ int main([[maybe_unused]]int argc, [[maybe_unused]]char* argv[])
 	foo_string_6("signal AFTER DISCONNECT { 'foo_string_6' ; 'foo' } signal_t connect to class const function (conection created by static connect");
 
 	std::cout << std::endl;
+
+	signal_t<void(std::string_view) const> foo_string_6_1;
+	auto connection_foo_string_6_1 = foo_string_6_1.connect<class_example_1, &class_example_1::foo>(&obj_example_2);
+
+	foo_string_6_1("1. signal { 'foo_string_6_1' ; 'class_example_1::foo const' } signal_t connect to class const function (conection created by static connect)");
+
+	std::cout << std::endl;
+
+	signal_t<void(std::string_view) const volatile> foo_string_6_2;
+	auto connection_foo_string_6_2 = foo_string_6_2.connect<class_example_1, &class_example_1::foo>(&obj_example_2);
+
+	foo_string_6_2("1. signal { 'foo_string_6_2' ; 'class_example_1::foo const volatile' } signal_t connect to class const function (conection created by static connect)");
+
+	std::cout << std::endl;
+
+	signal_t<void(std::string_view) const&> foo_string_6_3;
+	auto connection_foo_string_6_3 = foo_string_6_3.connect<class_example_1, &class_example_1::foo_const_lvalue_ref_qualifier>(&obj_example_2);
+
+	foo_string_6_3("1. signal { 'foo_string_6_3' ; 'class_example_1::foo_const_lvalue_ref_qualifier const&' } signal_t connect to class const function (conection created by static connect)");
+
+	std::cout << std::endl;
+
+	signal_t<void(std::string_view) const& noexcept> foo_string_6_4;
+	auto connection_foo_string_6_4 = foo_string_6_4.connect<class_example_1, &class_example_1::foo_const_lvalue_ref_qualifier_noexcept>(&obj_example_2);
+
+	foo_string_6_4("1. signal { 'foo_string_6_4' ; 'class_example_1::foo_const_lvalue_ref_qualifier_noexcept const& noexcept>' } signal_t connect to class const function (conection created by static connect)");
+
+	std::cout << std::endl;
+
 
 	std::cout << "---------------------------------------------------------------------" << std::endl;
 	std::cout << "---------------- Creating from lambda expression --------------------" << std::endl;
@@ -493,7 +620,7 @@ int main([[maybe_unused]]int argc, [[maybe_unused]]char* argv[])
 
 	class_example_2 obj_example_3;
 
-	signal_t<void(std::string_view)> foo_string_11;
+	signal_t<void(std::string_view)const> foo_string_11;
 	auto connection_foo_string_11 = foo_string_11.connect<class_example_2, &class_example_2::foo_const>(&obj_example_3);
 
 	foo_string_11("signal { 'foo_string_11' ; 'class_example_2::foo_const' } signal_t connect to class const function (conection created by static connect)");

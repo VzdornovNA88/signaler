@@ -203,7 +203,7 @@ int main([[maybe_unused]]int argc, [[maybe_unused]]char* argv[])
 
 	class_example_1 obj_example_2;
 
-	signal_t<void(std::string_view)> foo_string_3;
+	signal_t<void(std::string_view)const> foo_string_3;
 	auto con_foo_string_3 = foo_string_3.connect<class_example_1, &class_example_1::foo_const>(&obj_example_2);
 
 	SHOW_DURATION_OP("signal emit for ----> foo_string_3(...)", foo_string_3("call"); , acc_op, count_op);
@@ -271,7 +271,7 @@ int main([[maybe_unused]]int argc, [[maybe_unused]]char* argv[])
 
 	class_example_2 obj_example_3;
 
-	signal_t<void(std::string_view)> foo_string_11;
+	signal_t<void(std::string_view)const> foo_string_11;
 	auto connection_foo_string_11 = foo_string_11.connect<class_example_2, &class_example_2::foo_const>(&obj_example_3);
 
 	SHOW_DURATION_OP("signal emit for ----> foo_string_11(...)", foo_string_11("call"), acc_op, count_op);

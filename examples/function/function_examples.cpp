@@ -23,16 +23,21 @@ struct A
 
 	void foo(int a)
 	{
-		std::cout << "method got: " << a << std::endl;
+		std::cout << "method 'foo' got: " << a << std::endl;
+	}
+
+	void foo(int a) const
+	{
+		std::cout << "method 'foo const' got: " << a << std::endl;
 	}
 
 	void foo1(int a) const
 	{
-		std::cout << "method got const: " << a << std::endl;
+		std::cout << "method 'foo1' got const: " << a << std::endl;
 		func(a + 1);
 	}
 
-	function_t<void(int)> func = function_t<void(int)>::bind<A, &A::foo>(this);
+	function_t<void(int)const> func = function_t<void(int)const>::bind<A, &A::foo>(this);
 };
 
 struct B {
@@ -84,19 +89,68 @@ void foo(std::string_view s)
 
 struct class_example_1 {
 
-	std::string_view class_ctx{ " / here is class context" };
+    static inline constexpr char ctx [] = " / here is class context" ;
+
+	std::string_view class_ctx{ctx};
+
+    void foo_for_std_bind(std::string_view s)
+	{
+		std::cout << "void class_example_1::foo(std::string_view s): " << s.data() << class_ctx.data() << std::endl;
+	}
 
 	void foo(std::string_view s)
 	{
 		std::cout << "void class_example_1::foo(std::string_view s): " << s.data() << class_ctx.data() << std::endl;
 	}
 
+    void foo(std::string_view s) const
+	{
+		std::cout << "void class_example_1::foo(std::string_view s) const : " << s.data() << class_ctx.data() << std::endl;
+	}
+
+	void foo(std::string_view s) const volatile
+	{
+		std::cout << "void class_example_1::foo(std::string_view s) const volatile : " << s.data() << ctx << std::endl;
+	}
+
+	void foo_const_lvalue_ref_qualifier_noexcept(std::string_view s) const& noexcept
+	{
+		std::cout << "void class_example_1::foo(std::string_view s) const& volatile noexcept: " << s.data() << ctx << std::endl;
+	}
+
+	void foo_lvalue_ref_qualifier_noexcept(std::string_view s) & noexcept
+	{
+		std::cout << "void class_example_1::foo(std::string_view s) & noexcept : " << s.data() << ctx << std::endl;
+	}
+
+	void foo_rvalue_ref_qualifier_noexcept(std::string_view s) && noexcept
+	{
+		std::cout << "void class_example_1::foo(std::string_view s) && noexcept : " << s.data() << ctx << std::endl;
+	}
+
+	void foo_const_lvalue_ref_qualifier(std::string_view s) const&
+	{
+		std::cout << "void class_example_1::foo(std::string_view s) const& : " << s.data() << ctx << std::endl;
+	}
+
+	void foo_lvalue_ref_qualifier(std::string_view s) &
+	{
+		std::cout << "void class_example_1::foo(std::string_view s) & : " << s.data() << ctx << std::endl;
+	}
+
+	void foo_rvalue_ref_qualifier(std::string_view s) &&
+	{
+		std::cout << "void class_example_1::foo(std::string_view s) && : " << s.data() << ctx << std::endl;
+	}
+
+
+
 	void foo_const(std::string_view s) const
 	{
 		std::cout << "void class_example_1::foo(std::string_view s) const: " << s.data() << class_ctx.data() << std::endl;
 	}
 
-	void foo_int_ref(int& i)
+	void foo_int_inc_by_ref(int& i)
 	{
 		std::cout << "void class_example_1::foo_int_ref(int& i): " << ++i << std::endl;
 	}
@@ -213,13 +267,55 @@ int main([[maybe_unused]]int argc, [[maybe_unused]]char* argv[])
 	std::cout << "---------------------------------------------------------------" << std::endl;
 
 	// static binding to class function 'foo_const' and initialized by function_t<void(std::string_view)>&&
-	auto foo_string_10(function_t<void(std::string_view)>::bind<class_example_1, &class_example_1::foo_const>(obj_example_1));
+	auto foo_string_10(function_t<void(std::string_view)const>::bind<class_example_1, &class_example_1::foo_const>(obj_example_1));
 
 	foo_string_10("call { 'foo_string_10' ; 'class_example_1::foo_const' } function_t from class function const (created by static bind function and copy constructor)");
 
 	std::cout << "---------------------------------------------------------------" << std::endl;
+
+	auto foo_string_10_1(function_t<void(std::string_view)const>::bind<class_example_1, &class_example_1::foo>(obj_example_1));
+
+	foo_string_10_1("call { 'foo_string_10_1' ; 'class_example_1::foo const' } function_t from class function const (created by static bind function and copy constructor)");
+
+	std::cout << "---------------------------------------------------------------" << std::endl;
+
+	auto foo_string_10_2(function_t<void(std::string_view)const volatile>::bind<class_example_1, &class_example_1::foo>(obj_example_1));
+
+	foo_string_10_2("call { 'foo_string_10_2' ; 'class_example_1::foo const volatile' } function_t from class function const (created by static bind function and copy constructor)");
+
+	std::cout << "---------------------------------------------------------------" << std::endl;
+
+	auto foo_string_10_3(function_t<void(std::string_view)const&>::bind<class_example_1, &class_example_1::foo_const_lvalue_ref_qualifier>(obj_example_1));
+
+	foo_string_10_3("call { 'foo_string_10_3' ; 'class_example_1::foo_const_lvalue_ref_qualifier const&' } function_t from class function const (created by static bind function and copy constructor)");
+
+	std::cout << "---------------------------------------------------------------" << std::endl;
+
+	auto foo_string_10_4(function_t<void(std::string_view)const& noexcept>::bind<class_example_1, &class_example_1::foo_const_lvalue_ref_qualifier_noexcept>(obj_example_1));
+
+	foo_string_10_4("call { 'foo_string_10_4' ; 'class_example_1::foo_const_lvalue_ref_qualifier_noexcept const& noexcept' } function_t from class function const (created by static bind function and copy constructor)");
+
+	std::cout << "---------------------------------------------------------------" << std::endl;
+
+	auto foo_string_10_5(function_t<void(std::string_view)& noexcept>::bind<class_example_1, &class_example_1::foo_lvalue_ref_qualifier_noexcept>(obj_example_1));
+
+	foo_string_10_5("call { 'foo_string_10_5' ; 'class_example_1::foo_lvalue_ref_qualifier_noexcept & noexcept' } function_t from class function const (created by static bind function and copy constructor)");
+
+	std::cout << "---------------------------------------------------------------" << std::endl;
+
+    auto foo_string_10_6(function_t<void(std::string_view)&>::bind<class_example_1, &class_example_1::foo_lvalue_ref_qualifier>(obj_example_1));
+
+	foo_string_10_6("call { 'foo_string_10_6' ; 'class_example_1::foo_lvalue_ref_qualifier &' } function_t from class function const (created by static bind function and copy constructor)");
+
+	std::cout << "---------------------------------------------------------------" << std::endl;
+
+	//! auto foo_string_10_6(function_t<void(std::string_view)&& noexcept>::bind<class_example_1, &class_example_1::foo_rvalue_ref_qualifier_noexcept>(obj_example_1));
+
+	//! foo_string_10_6("call { 'foo_string_10_6' ; 'class_example_1::foo_rvalue_ref_qualifier_noexcept && noexcept' } function_t from class function const (created by static bind function and copy constructor)");
+
+	//! std::cout << "---------------------------------------------------------------" << std::endl;
 	
-	// dynamic binding to class function 'foo' and initialized by function_t<void(std::string_view)>&&
+	//! dynamic binding to class function 'foo' and initialized by function_t<void(std::string_view)>&&
 	auto foo_string_11 = function_t<void(std::string_view)>::bind(obj_example_1, &class_example_1::foo);
 
 	foo_string_11("call { 'foo_string_11' ; 'class_example_1::foo' } function_t from class function (created by dynamic bind function and copy assignable operator)");
@@ -227,7 +323,7 @@ int main([[maybe_unused]]int argc, [[maybe_unused]]char* argv[])
 	std::cout << "---------------------------------------------------------------" << std::endl;
 	
 	// dynamic binding to class function 'foo_const' and initialized by function_t<void(std::string_view)>&&
-	auto foo_string_12 = function_t<void(std::string_view)>::bind(obj_example_1, &class_example_1::foo_const);
+	auto foo_string_12 = function_t<void(std::string_view)const>::bind(obj_example_1, &class_example_1::foo_const);
 
 	foo_string_12("call { 'foo_string_12' ; 'class_example_1::foo_const' } function_t from class function const (created by dynamic bind function and copy assignable operator)");
 
@@ -242,7 +338,7 @@ int main([[maybe_unused]]int argc, [[maybe_unused]]char* argv[])
 
 	// construct to class function 'foo_const'
 	class_example_1* obj = nullptr/*&obj_example_1*/;
-	function_t<void(std::string_view)> foo_string_12_construct (obj, &class_example_1::foo_const);
+	function_t<void(std::string_view)const> foo_string_12_construct (obj, &class_example_1::foo_const);
 
 	auto result_of_foo_string_12_construct = foo_string_12_construct("call { 'foo_string_12_construct' ; 'class_example_1::foo_const' } function_t from class function const (created by constructor)");
 
@@ -422,9 +518,9 @@ int main([[maybe_unused]]int argc, [[maybe_unused]]char* argv[])
 
 	using std::placeholders::_1;
 
-	foo_string_21 = std::bind ( &class_example_1::foo, obj_example_1, _1 );
+	foo_string_21 = std::bind ( &class_example_1::foo_for_std_bind, obj_example_1, _1 );
 
-	foo_string_21("call{ 'foo_string_21'; 'std::function from std::bind with &class_example_1::foo' } function_t from std::function");
+	foo_string_21("call{ 'foo_string_21'; 'std::function from std::bind with &class_example_1::foo_for_std_bind' } function_t from std::function");
 
 	std::cout << "---------------------------------------------------------------" << std::endl;
 
@@ -468,7 +564,7 @@ int main([[maybe_unused]]int argc, [[maybe_unused]]char* argv[])
 
 	std::cout << std::endl;
 	
-	auto foo_int_ref_1 = function_t<void(int&)>::bind<class_example_1, &class_example_1::foo_int_ref>(obj_example_1);
+	auto foo_int_ref_1 = function_t<void(int&)>::bind<class_example_1, &class_example_1::foo_int_inc_by_ref>(obj_example_1);
 	int I = 2;
 	foo_int_ref_1(I);
 

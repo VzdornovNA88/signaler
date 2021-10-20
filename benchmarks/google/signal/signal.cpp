@@ -98,7 +98,7 @@ void benchmark_emiting_signal_to_method(benchmark::State& state) noexcept {
 void benchmark_emiting_signal_to_method_const_noexcept(benchmark::State& state) noexcept {
 
   Impl impl;
-  signal_t<void(unsigned int&)> signal;
+  signal_t<void(unsigned int&)const noexcept> signal;
 
   auto connection = signal.connect<Impl,&Impl::method_const_noexcept>(&impl);
 
