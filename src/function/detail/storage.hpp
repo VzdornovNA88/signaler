@@ -39,38 +39,38 @@
 
 namespace signaler::detail {
 
-template <size_t SMALL_OPT_SIZE> class storage_t final {
+template <size_t SMALL_OPT_SIZE> class storage_t__ final {
 
   static_assert(SMALL_OPT_SIZE >= 16,
                 "The NTT parameter SMALL_OPT_SIZE in storage frame of "
                 "function_t type shall be greater than or equal to 16 bytes !");
 
-  struct control_t {
+  struct control_t__ {
 
     using destructor_t = void (*)(void *);
 
     size_t cnt = 0;
     destructor_t destruct_ = nullptr;
   };
-  template <typename T> struct control_block_t final : control_t {
+  template <typename T> struct control_block_t__ final : control_t__ {
 
     T payload;
 
-    control_block_t(T &&_payload) noexcept
+    control_block_t__(T &&_payload) noexcept
         : payload(std::forward<T>(_payload)) {
       this->destruct_ = payload_destructor;
     }
 
-    control_block_t(const T &_payload) noexcept : payload(_payload) {
+    control_block_t__(const T &_payload) noexcept : payload(_payload) {
       this->destruct_ = payload_destructor;
     }
 
     static void payload_destructor(void *o) noexcept {
-      static_cast<control_block_t<T> *>(o)->payload.~T();
+      static_cast<control_block_t__<T> *>(o)->payload.~T();
     }
   };
 
-  enum storage_state_t : size_t {
+  enum storage_state_t__ : size_t {
     INVALID = 0,
     LOCAL = 1,
     DYNAMIC = 2,
@@ -78,18 +78,18 @@ template <size_t SMALL_OPT_SIZE> class storage_t final {
     POINTER_F = 4,
   };
 
-  struct small_t {
+  struct small_t__ {
     std::byte array[SMALL_OPT_SIZE];
   };
 
-  using small_object_t =
-      typename std::aligned_storage<sizeof(small_t), alignof(small_t)>::type;
-  using big_object_t = void *;
-  using ptr_object_t = std::byte *;
-  using ptr_function_t = void (*)();
+  using small_object_t__ =
+      typename std::aligned_storage<sizeof(small_t__), alignof(small_t__)>::type;
+  using big_object_t__ = void *;
+  using ptr_object_t__ = std::byte *;
+  using ptr_function_t__ = void (*)();
 
-  std::variant<std::monostate, small_object_t, big_object_t, ptr_object_t,
-               ptr_function_t>
+  std::variant<std::monostate, small_object_t__, big_object_t__, ptr_object_t__,
+               ptr_function_t__>
       store;
 
   void destructor(void *p_store) noexcept {
@@ -97,7 +97,7 @@ template <size_t SMALL_OPT_SIZE> class storage_t final {
     if (p_store == nullptr)
       return;
 
-    auto cb = static_cast<control_t *>(p_store);
+    auto cb = static_cast<control_t__ *>(p_store);
     auto &cnt_ref = cb->cnt;
 
     if (cnt_ref == 0) {
@@ -112,14 +112,14 @@ template <size_t SMALL_OPT_SIZE> class storage_t final {
   }
 
 public:
-  storage_t() noexcept = default;
-  storage_t(std::nullptr_t const) noexcept : storage_t() {}
-  ~storage_t() noexcept {
+  storage_t__() noexcept = default;
+  storage_t__(std::nullptr_t const) noexcept : storage_t__() {}
+  ~storage_t__() noexcept {
     if (auto p_store = std::get_if<DYNAMIC>(&store))
       destructor(*p_store);
   }
 
-  storage_t(storage_t const &s) noexcept {
+  storage_t__(storage_t__ const &s) noexcept {
 
     if (auto p_store = std::get_if<DYNAMIC>(&store))
       destructor(*p_store);
@@ -128,10 +128,10 @@ public:
 
     if (auto p_store = std::get_if<DYNAMIC>(&store))
       if (*p_store != nullptr)
-        ++static_cast<control_t *>(*p_store)->cnt;
+        ++static_cast<control_t__ *>(*p_store)->cnt;
   }
 
-  storage_t(storage_t &&s) noexcept {
+  storage_t__(storage_t__ &&s) noexcept {
 
     if (auto p_store = std::get_if<DYNAMIC>(&store))
       destructor(*p_store);
@@ -144,7 +144,7 @@ public:
     }
   }
 
-  storage_t &operator=(storage_t const &s) noexcept {
+  storage_t__ &operator=(storage_t__ const &s) noexcept {
 
     if (auto p_store = std::get_if<DYNAMIC>(&store))
       destructor(*p_store);
@@ -153,12 +153,12 @@ public:
 
     if (auto p_store = std::get_if<DYNAMIC>(&store))
       if (*p_store != nullptr)
-        ++static_cast<control_t *>(*p_store)->cnt;
+        ++static_cast<control_t__ *>(*p_store)->cnt;
 
     return *this;
   }
 
-  storage_t &operator=(storage_t &&s) noexcept {
+  storage_t__ &operator=(storage_t__ &&s) noexcept {
 
     if (auto p_store = std::get_if<DYNAMIC>(&store))
       destructor(*p_store);
@@ -173,7 +173,7 @@ public:
     return *this;
   }
 
-  storage_t &operator=(std::nullptr_t const) noexcept {
+  storage_t__ &operator=(std::nullptr_t const) noexcept {
 
     if (auto p_store = std::get_if<DYNAMIC>(&store))
       destructor(*p_store);
@@ -183,7 +183,7 @@ public:
     return *this;
   }
 
-  storage_t &operator=(int const) noexcept {
+  storage_t__ &operator=(int const) noexcept {
 
     if (auto p_store = std::get_if<DYNAMIC>(&store))
       destructor(*p_store);
@@ -193,73 +193,73 @@ public:
     return *this;
   }
 
-  template <typename T> storage_t(T f) noexcept {
+  template <typename T> storage_t__(T f) noexcept {
 
     if (auto p_store = std::get_if<DYNAMIC>(&store))
       destructor(*p_store);
 
-    using functor_t = typename std::decay<T>::type;
+    using functor_t__ = typename std::decay<T>::type;
 
     if constexpr (std::is_function_v<std::remove_pointer_t<T>>) {
-      store = ptr_function_t();
+      store = ptr_function_t__();
       auto p_store = std::get_if<POINTER_F>(&store);
-      new (p_store) functor_t(f);
+      new (p_store) functor_t__(f);
     } else if constexpr (std::is_pointer_v<T>) {
-      store = ptr_object_t();
+      store = ptr_object_t__();
       auto p_store = std::get_if<POINTER>(&store);
       new (p_store) T(f);
-    } else if constexpr (sizeof(functor_t) > sizeof(small_t)) {
+    } else if constexpr (sizeof(functor_t__) > sizeof(small_t__)) {
 
       const std::nothrow_t noexcept_v;
-      auto p_store = operator new(sizeof(control_block_t<functor_t>),
+      auto p_store = operator new(sizeof(control_block_t__<functor_t__>),
                                   noexcept_v);
 
       if (p_store == nullptr)
         store = std::monostate{};
       else {
-        new (p_store) control_block_t<functor_t>(std::forward<T>(
-            f)); /* ??? constructor of functor_t can throws any exception */
+        new (p_store) control_block_t__<functor_t__>(std::forward<T>(
+            f)); /* ??? constructor of functor_t__ can throws any exception */
         store = p_store;
       }
     } else {
-      store = small_object_t();
+      store = small_object_t__();
       auto p_store = std::get_if<LOCAL>(&store);
-      new (p_store) functor_t(std::forward<T>(f));
+      new (p_store) functor_t__(std::forward<T>(f));
     }
   }
 
-  template <typename T> storage_t &operator=(T f) noexcept {
+  template <typename T> storage_t__ &operator=(T f) noexcept {
 
     if (auto p_store = std::get_if<DYNAMIC>(&store))
       destructor(*p_store);
 
-    using functor_t = typename std::decay<T>::type;
+    using functor_t__ = typename std::decay<T>::type;
 
     if constexpr (std::is_function_v<std::remove_pointer_t<T>>) {
-      store = ptr_function_t();
+      store = ptr_function_t__();
       auto p_store = std::get_if<POINTER_F>(&store);
-      new (p_store) functor_t(f);
+      new (p_store) functor_t__(f);
     } else if constexpr (std::is_pointer_v<T>) {
-      store = ptr_object_t();
+      store = ptr_object_t__();
       auto p_store = std::get_if<POINTER>(&store);
       new (p_store) T(f);
-    } else if constexpr (sizeof(functor_t) > sizeof(small_t)) {
+    } else if constexpr (sizeof(functor_t__) > sizeof(small_t__)) {
 
       const std::nothrow_t noexcept_v;
-      auto p_store = operator new(sizeof(control_block_t<functor_t>),
+      auto p_store = operator new(sizeof(control_block_t__<functor_t__>),
                                   noexcept_v);
 
       if (p_store == nullptr)
         store = std::monostate{};
       else {
-        new (p_store) control_block_t<functor_t>(std::forward<T>(
-            f)); /* ??? constructor of functor_t can throws any exception */
+        new (p_store) control_block_t__<functor_t__>(std::forward<T>(
+            f)); /* ??? constructor of functor_t__ can throws any exception */
         store = p_store;
       }
     } else {
-      store = small_object_t();
+      store = small_object_t__();
       auto p_store = std::get_if<LOCAL>(&store);
-      new (p_store) functor_t(std::forward<T>(f));
+      new (p_store) functor_t__(std::forward<T>(f));
     }
 
     return *this;
@@ -267,15 +267,15 @@ public:
 
   template <typename T> [[nodiscard]] constexpr auto get() noexcept {
 
-    using object_t = typename std::decay<T>::type;
+    using object_t__ = typename std::decay<T>::type;
 
     if constexpr (std::is_function_v<std::remove_pointer_t<T>>)
       return reinterpret_cast<T>(*std::get_if<POINTER_F>(&store));
     else if constexpr (std::is_pointer_v<T>) {
       return std::launder(reinterpret_cast<T>(*std::get_if<POINTER>(&store)));
-    } else if constexpr (sizeof(object_t) > sizeof(small_t)) {
+    } else if constexpr (sizeof(object_t__) > sizeof(small_t__)) {
       return std::launder(
-          reinterpret_cast<T *>(&static_cast<control_block_t<object_t> *>(
+          reinterpret_cast<T *>(&static_cast<control_block_t__<object_t__> *>(
                                      *std::get_if<DYNAMIC>(&store))
                                      ->payload));
     } else {
@@ -283,7 +283,7 @@ public:
     }
   }
 
-  bool operator==(storage_t const &r) const noexcept {
+  bool operator==(storage_t__ const &r) const noexcept {
 
     if (store.index() == INVALID && r.store.index() == INVALID)
       return true;
