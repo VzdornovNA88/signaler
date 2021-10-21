@@ -682,11 +682,13 @@ int main([[maybe_unused]]int argc, [[maybe_unused]]char* argv[])
 	foo_B_1_lvref(b2);
 
 	signal_t<void(B&&)> foo_B_1_rvref;
-	auto connection_foo_B_rvref = foo_B_1_rvref.connect<class_example_2, &class_example_2::foo_B_by_rvref>(&obj_example_3);
-	B b3{1};
-	foo_B_1_rvref(std::move(b3));
+    auto connection_foo_B_rvref = foo_B_1_rvref.connect<class_example_2, &class_example_2::foo_B_by_rvref>(&obj_example_3);
+    {
+        B b3{1};
+        foo_B_1_rvref(std::move(b3));
+    }
 
-	std::this_thread::sleep_for(std::chrono::seconds(10));
+    std::this_thread::sleep_for(std::chrono::seconds(10));
 
-	return 0;
+        return 0;
 }
