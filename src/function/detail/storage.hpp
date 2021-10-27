@@ -265,7 +265,7 @@ public:
     return *this;
   }
 
-  template <typename T> [[nodiscard]] constexpr auto get() noexcept {
+  template <typename T> [[nodiscard]] constexpr auto get() & noexcept {
 
     using object_t__ = typename std::decay<T>::type;
 
@@ -282,6 +282,9 @@ public:
       return std::launder(reinterpret_cast<T *>(std::get_if<LOCAL>(&store)));
     }
   }
+
+  template <typename T> [[nodiscard]] constexpr auto get() const&& noexcept = delete;
+  template <typename T> [[nodiscard]] constexpr auto get() && noexcept = delete;
 
   bool operator==(storage_t__ const &r) const noexcept {
 

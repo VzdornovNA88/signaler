@@ -326,7 +326,7 @@ template <typename T> class signal_t__;
     }                                                                                                                                                \
                                                                                                                                                      \
     template <typename T, R (T::*m)(A...) CONST VOLATILE REF NOEXCEPT>                                                                               \
-    [[nodiscard]] connection_t connect(T *o) {                                                                                                       \
+    [[nodiscard]] connection_t connect(T *o) & {                                                                                                       \
                                                                                                                                                      \
       auto slot_ = function_t<R(                                                                                                                     \
           A...) CONST VOLATILE REF NOEXCEPT>::template bind<T, m>(o);                                                                                \
@@ -348,7 +348,10 @@ template <typename T> class signal_t__;
     }                                                                                                                                                \
                                                                                                                                                      \
     template <typename T, R (T::*m)(A...) CONST VOLATILE REF NOEXCEPT>                                                                               \
-    void disconnect(T *o) {                                                                                                                          \
+    [[nodiscard]] connection_t connect(T *o) && = delete;                                                                                            \
+                                                                                                                                                     \
+    template <typename T, R (T::*m)(A...) CONST VOLATILE REF NOEXCEPT>                                                                               \
+    void disconnect(T *o) & {                                                                                                                        \
                                                                                                                                                      \
       auto _disconnect_slot = function_t<R(                                                                                                          \
           A...) CONST VOLATILE REF NOEXCEPT>::template bind<T, m>(o);                                                                                \
@@ -362,7 +365,10 @@ template <typename T> class signal_t__;
         connections_.erase(it);                                                                                                                      \
     }                                                                                                                                                \
                                                                                                                                                      \
-    template <R (*f)(A...) NOEXCEPT> [[nodiscard]] connection_t connect() {                                                                          \
+    template <typename T, R (T::*m)(A...) CONST VOLATILE REF NOEXCEPT>                                                                               \
+    void disconnect(T *o) && = delete;                                                                                                               \
+                                                                                                                                                     \
+    template <R (*f)(A...) NOEXCEPT> [[nodiscard]] connection_t connect() & {                                                                        \
                                                                                                                                                      \
       auto slot_ = function_t<R(A...) NOEXCEPT>::template bind<f>();                                                                                 \
                                                                                                                                                      \
@@ -377,7 +383,9 @@ template <typename T> class signal_t__;
         return *it;                                                                                                                                  \
     }                                                                                                                                                \
                                                                                                                                                      \
-    template <R (*f)(A...) NOEXCEPT> void disconnect() {                                                                                             \
+    template <R (*f)(A...) NOEXCEPT> [[nodiscard]] connection_t connect() && = delete;                                                               \
+                                                                                                                                                     \
+    template <R (*f)(A...) NOEXCEPT> void disconnect() & {                                                                                             \
                                                                                                                                                      \
       auto _disconnect_slot =                                                                                                                        \
           function_t<R(A...) NOEXCEPT>::template bind<f>();                                                                                          \
@@ -391,10 +399,12 @@ template <typename T> class signal_t__;
         connections_.erase(it);                                                                                                                      \
     }                                                                                                                                                \
                                                                                                                                                      \
-    template <typename T /*// should add is_function<T> OR is_function_object<T> for*/                                                             \
-                       /*// this*/                                                                                                               \
-            >                                                                                                                                    \
-  [[nodiscard]] connection_t connect(T &&o) { \
+    template <R (*f)(A...) NOEXCEPT> void disconnect() && = delete;                                                                                  \
+                                                                                                                                                     \
+    template <typename T /*// should add is_function<T> OR is_function_object<T> for*/                                                               \
+                       /*// this*/                                                                                                                   \
+            >                                                                                                                                        \
+  [[nodiscard]] connection_t connect(T &&o) & {                                                                                                        \
                                                                                                                                                      \
       slot_t slot_(std::forward<T>(o));                                                                                                              \
                                                                                                                                                      \
@@ -413,16 +423,20 @@ template <typename T> class signal_t__;
       return connections_.emplace_back(ctx_, std::move(slot_));                                                                                      \
     }                                                                                                                                                \
                                                                                                                                                      \
-    [[nodiscard]] connection_t connect(signal_t__ &signal) {                                                                                         \
+    template <typename T > [[nodiscard]] connection_t connect(T &&o) && = delete;                                                                    \
+                                                                                                                                                     \
+    [[nodiscard]] connection_t connect(signal_t__ &signal) & {                                                                                         \
       static_assert(std::is_same<R, void>::value,                                                                                                    \
                     "Return value of signal must be only 'void' type");                                                                              \
                                                                                                                                                      \
       return connect<signal_t__, &signal_t__::operator()>(&signal);                                                                                  \
     }                                                                                                                                                \
                                                                                                                                                      \
-    template <typename T>                                                                                                                            \
+    [[nodiscard]] connection_t connect(signal_t__ &signal) && = delete;                                                                              \
+                                                                                                                                                     \
+    template <typename T,typename Dependent_context_t__ = R>                                                                                                                            \
     [[nodiscard]] connection_t connect([[maybe_unused]] T *o,                                                                                        \
-                                       signal_t__ &signal) {                                                                                         \
+                                       signal_t__ &signal) & {                                                                                         \
       static_assert(std::is_same<R, void>::value,                                                                                                    \
                     "Return value of signal must be only 'void' type !");                                                                            \
                                                                                                                                                      \
@@ -445,12 +459,19 @@ template <typename T> class signal_t__;
         return *it;                                                                                                                                  \
     }                                                                                                                                                \
                                                                                                                                                      \
-    void disconnect(signal_t__ &_disconnect_signal) {                                                                                                \
+    template <typename T,typename Dependent_context_t__ = R>                                                                                                                            \
+    [[nodiscard]] connection_t connect([[maybe_unused]] T *o,                                                                                        \
+                                       signal_t__ &signal) && = delete;                                                                              \
+                                                                                                                                                     \
+    void disconnect(signal_t__ &_disconnect_signal) & {                                                                                                \
                                                                                                                                                      \
       disconnect<signal_t__, &signal_t__::operator()>(&_disconnect_signal);                                                                          \
     }                                                                                                                                                \
+    template <typename T>                                                                                                                            \
+    [[nodiscard]] connection_t connect([[maybe_unused]] T *o,                                                                                        \
+                                       signal_t__ &signal) && = delete;                                                                              \
                                                                                                                                                      \
-    void disconnect(const connection_t &_c) {                                                                                                        \
+    void disconnect(const connection_t &_c) & {                                                                                                        \
                                                                                                                                                      \
       auto it = std::lower_bound(connections_.begin(), connections_.end(), _c,                                                                       \
                                  std::less<>{});                                                                                                     \
@@ -458,8 +479,10 @@ template <typename T> class signal_t__;
       if (it != connections_.end())                                                                                                                  \
         connections_.erase(it);                                                                                                                      \
     }                                                                                                                                                \
+    void disconnect(const connection_t &_c) && = delete;                                                                                             \
                                                                                                                                                      \
-    void disconnect() { connections_.clear(); }                                                                                                      \
+    void disconnect() &  { connections_.clear(); }                                                                                                   \
+    void disconnect() && = delete;                                                                                                                   \
                                                                                                                                                      \
     void operator()(A... p) noexcept {                                                                                                               \
                                                                                                                                                      \

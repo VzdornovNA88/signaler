@@ -38,7 +38,7 @@
 namespace signaler {
 
 struct iobject_t {
-  virtual icontext_t *context() const noexcept = 0;
+  virtual icontext_t *context() const& noexcept = 0;
 };
 
 template <auto ctx_> struct object_t : iobject_t {
@@ -51,7 +51,9 @@ template <auto ctx_> struct object_t : iobject_t {
       "a non-type template parameter that must be convertible to icontext_t* "
       "!");
 
-  icontext_t *context() const noexcept final override { return ctx_; }
+  icontext_t *context() const& noexcept final override { return ctx_; }
+  icontext_t *context() const&& noexcept = delete;
+  icontext_t *context() && noexcept = delete;
 };
 
 } // namespace signaler
