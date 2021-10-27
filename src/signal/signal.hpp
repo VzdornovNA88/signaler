@@ -141,8 +141,8 @@ template <typename T> class signal_t__;
                                                                                                                                                      \
         friend class signal_t__<R(A...) CONST VOLATILE REF NOEXCEPT>;                                                                                \
                                                                                                                                                      \
-        using queue_t = detail::queue_t<T>;                                                                                                          \
-        queue_t results_;                                                                                                                            \
+        using queue_t__ = detail::queue_t<T>;                                                                                                          \
+        queue_t__ results_;                                                                                                                            \
                                                                                                                                                      \
       protected:                                                                                                                                     \
         virtual void set(result_t<T> v_) noexcept final override {                                                                                   \

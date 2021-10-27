@@ -44,8 +44,8 @@ struct icontext_t {
 
 template <size_t len = 16> class context_t final : public icontext_t {
 
-  using queue_t = signaler::detail::event_queue_t<len>;
-  queue_t queue_;
+  using queue_t__ = signaler::detail::event_queue_t<len>;
+  queue_t__ queue_;
 
 public:
   context_t() noexcept {}

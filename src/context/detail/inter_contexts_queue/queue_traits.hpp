@@ -118,7 +118,7 @@ using is_not_queue = void;
 template <typename T, typename E = is_not_queue>
 struct require_queue_concept_for {
 
-  using queue_t = E;
+  using queue_t__ = E;
 
   static_assert(has_queue_value_type<T>::value,
                 "The type T does not satisfy the concept 'queue' ! It should "
@@ -131,7 +131,7 @@ struct require_queue_concept_for {
   static_assert(
       has_queue_wait_pop<T>::value,
       "The type T does not satisfy the concept 'queue' ! It should contain: "
-      "'public: result_t<queue_t::value_type> wait_pop() {...}'");
+      "'public: result_t<queue_t__::value_type> wait_pop() {...}'");
 
   static_assert(has_queue_empty<T>::value,
                 "The type T does not satisfy the concept 'queue' ! It should "
@@ -166,7 +166,7 @@ struct require_queue_concept_for {
 template <typename T>
 struct require_queue_concept_for<T, template_parameter_is_queue<T>> {
 
-  using queue_t = T;
+  using queue_t__ = T;
 };
 
 template <typename T> struct queue_traits {

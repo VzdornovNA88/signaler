@@ -55,19 +55,19 @@ template <size_t queue_lenght = 8>
 using event_queue_t =
 #ifdef SIGNALER_FREE_RTOS
     typename require_queue_concept_for<
-        free_rtos_queue_t<event_t, queue_lenght>>::queue_t;
+        free_rtos_queue_t<event_t, queue_lenght>>::queue_t__;
 #else
     typename require_queue_concept_for<
-        std_queue_t<event_t, queue_lenght>>::queue_t;
+        std_queue_t<event_t, queue_lenght>>::queue_t__;
 #endif
 
 template <typename T, size_t queue_lenght = 8>
 using queue_t =
 #ifdef SIGNALER_FREE_RTOS
     typename require_queue_concept_for<
-        free_rtos_queue_t<T, queue_lenght>>::queue_t;
+        free_rtos_queue_t<T, queue_lenght>>::queue_t__;
 #else
-    typename require_queue_concept_for<std_queue_t<T, queue_lenght>>::queue_t;
+    typename require_queue_concept_for<std_queue_t<T, queue_lenght>>::queue_t__;
 #endif
 
 } // namespace signaler::detail
