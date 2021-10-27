@@ -690,5 +690,7 @@ int main([[maybe_unused]]int argc, [[maybe_unused]]char* argv[])
 
     std::this_thread::sleep_for(std::chrono::seconds(10));
 
+// auto con = std::move(signal_t<void(void)> {}).connect([](){});
+// std::cout << "----"<< con.get_result().status().message().c_str() << std::endl;
         return 0;
 }
