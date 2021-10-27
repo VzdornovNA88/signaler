@@ -100,7 +100,7 @@ template <typename T> class signal_t__;
                                                                                                                                                      \
     template <typename T,                                                                                                                            \
               typename T_ = std::conditional_t<std::is_rvalue_reference_v<T>,                                                                        \
-                                               std::decay_t<T>, T>>                                                                                  \
+                                               std::remove_reference_t<T>, T>>                                                                       \
     struct arg_t__ {                                                                                                                                 \
       T_ arg;                                                                                                                                        \
       operator T_() {                                                                                                                                \
