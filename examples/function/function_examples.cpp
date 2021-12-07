@@ -92,6 +92,7 @@ struct class_example_1 {
     static inline constexpr char ctx [] = " / here is class context" ;
 
 	std::string_view class_ctx{ctx};
+	//unsigned char data[8];
 
     void foo_for_std_bind(std::string_view s)
 	{
@@ -154,7 +155,41 @@ struct class_example_1 {
 	{
 		std::cout << "void class_example_1::foo_int_ref(int& i): " << ++i << std::endl;
 	}
+
+	bool operator==(const class_example_1& t){
+		return class_ctx == t.class_ctx;
+	}
+
+	void operator()(std::string_view s) const {
+		std::cout << "oid operator()(std::string_view s) const : " << s.data() << " - with context: " << class_ctx.data() << std::endl;
+	}
+
+
+// 	class_example_1() noexcept = default;
+//   ~class_example_1() noexcept = default;
+//   class_example_1(class_example_1 const &s) {};
+//   class_example_1 &operator=(class_example_1 const &s) {};
+//   class_example_1(class_example_1 &&s) noexcept = default;
+//   class_example_1 &operator=(class_example_1 &&s) noexcept = default;
 };
+
+
+struct class_example_2 {
+
+    static inline constexpr char ctx [] = " / here is class context" ;
+
+	std::string_view class_ctx{ctx};
+
+	bool operator==(const class_example_2& t){
+		std::cout << "---------------------------> bool operator==(class_example_1&& t)" << std::endl;
+		return class_ctx == t.class_ctx;
+	}
+
+	void operator()(std::string_view s)  {
+		std::cout << "oid operator()(std::string_view s) const : " << s.data() << " - with context: " << class_ctx.data() << std::endl;
+	}
+};
+
 
 int main([[maybe_unused]]int argc, [[maybe_unused]]char* argv[])
 {
@@ -238,7 +273,8 @@ int main([[maybe_unused]]int argc, [[maybe_unused]]char* argv[])
 		std::string ctx = " / here is lambda context";
 		auto lambda = [ctx](std::string_view s) {
 			std::string arg_{s.data()} ;
-			foo((arg_ + ctx).c_str());
+			auto c_str_ = (arg_ + ctx);
+			foo(c_str_.c_str());
 		};
 
 		foo_string_8 = lambda;
@@ -436,7 +472,7 @@ int main([[maybe_unused]]int argc, [[maybe_unused]]char* argv[])
 	foo_string_18 = foo_string_17;
 
 	if (foo_string_17 == foo_string_18)
-		std::cout << "2. foo_string_17 == foo_string_18 with ( void foo(std::string_view s) )" << std::endl;
+		std::cout << "2. foo_string_17 == foo_string_18 with ( void foo(std::string_view s) ) after assigning 'foo_string_18 = foo_string_17' " << std::endl;
 
 	foo_string_18 = nullptr;
 
@@ -468,6 +504,24 @@ int main([[maybe_unused]]int argc, [[maybe_unused]]char* argv[])
 	if (foo_string_17 != foo_string_18)
 		std::cout << "8. foo_string_17 != foo_string_18 with ( lambda )" << std::endl;
 
+    foo_string_17 = class_example_1{};
+	foo_string_18 = class_example_1{};
+
+	if (foo_string_17 == foo_string_18)
+		std::cout << "9. foo_string_17 == foo_string_18 with ( class_example_1{} )" << std::endl;
+
+	foo_string_17 = class_example_1{};
+	foo_string_18 = foo_string_17;
+
+	if (foo_string_17 == foo_string_18)
+		std::cout << "10. foo_string_17 == foo_string_18 with ( class_example_1{} ) after assigning 'foo_string_18 = foo_string_17'" << std::endl;
+
+	foo_string_17 = class_example_1{};
+	foo_string_18 = class_example_2{};
+
+	if (foo_string_17 != foo_string_18)
+		std::cout << "11. foo_string_17 != foo_string_18 with ( class_example_2{} )" << std::endl;
+
 	std::cout << std::endl;
 	std::cout << std::endl;
 
@@ -481,7 +535,7 @@ int main([[maybe_unused]]int argc, [[maybe_unused]]char* argv[])
 
 	std::cout << "sizeof(foo_string_19) = " << sizeof(foo_string_19) << std::endl;
 
-	function_t<void(std::string_view),48> foo_string_20 = [](std::string_view s) { foo(s); };
+	function_t<void(std::string_view),40> foo_string_20 = [](std::string_view s) { foo(s); };
 
 	std::cout << "sizeof(foo_string_20) = " << sizeof(foo_string_20) << std::endl;
 
