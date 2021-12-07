@@ -80,9 +80,12 @@ template <typename T> class signal_t__;
     class connection_t;                                                                                                                              \
                                                                                                                                                      \
   private:                                                                                                                                           \
-    /*//! hotfix : msvc in vs2017(latest) doesn't compile static_assert with                                                                         \
-     * fold expression */                                                                                                                            \
+    /*//! hotfix : msvc in vs2017(latest) doesn't compile static_assert with*/                                                                       \
+    /*//! fold expression */                                                                                                                         \
     template <bool r> struct check_t__ { static constexpr bool value = r; };                                                                         \
+                                                                                                                                                     \
+    template <typename, typename = std::void_t<>> struct is_function_object_t__ : std::false_type {};                                                \
+    template <typename T> struct is_function_object_t__<T,decltype(std::declval<T>().operator()(std::declval<A>()...))> : std::true_type {};         \
                                                                                                                                                      \
     static_assert(check_t__<(std::is_nothrow_move_constructible<A>::value &&                                                                         \
                              ...)>::value,                                                                                                           \
@@ -328,8 +331,7 @@ template <typename T> class signal_t__;
     template <typename T, R (T::*m)(A...) CONST VOLATILE REF NOEXCEPT>                                                                               \
     [[nodiscard]] connection_t connect(T *o) & {                                                                                                       \
                                                                                                                                                      \
-      auto slot_ = function_t<R(                                                                                                                     \
-          A...) CONST VOLATILE REF NOEXCEPT>::template bind<T, m>(o);                                                                                \
+      auto slot_ = slot_t::template bind<T, m>(o);                                                                                \
                                                                                                                                                      \
       auto it = std::find_if(connections_.begin(), connections_.end(),                                                                               \
                              [&slot_](const auto &connection_) {                                                                                     \
@@ -353,8 +355,7 @@ template <typename T> class signal_t__;
     template <typename T, R (T::*m)(A...) CONST VOLATILE REF NOEXCEPT>                                                                               \
     void disconnect(T *o) & {                                                                                                                        \
                                                                                                                                                      \
-      auto _disconnect_slot = function_t<R(                                                                                                          \
-          A...) CONST VOLATILE REF NOEXCEPT>::template bind<T, m>(o);                                                                                \
+      auto _disconnect_slot = slot_t::template bind<T, m>(o);                                                                                \
                                                                                                                                                      \
       auto it = std::find_if(connections_.begin(), connections_.end(),                                                                               \
                              [&_disconnect_slot](const auto &_connection) {                                                                          \
@@ -370,7 +371,7 @@ template <typename T> class signal_t__;
                                                                                                                                                      \
     template <R (*f)(A...) NOEXCEPT> [[nodiscard]] connection_t connect() & {                                                                        \
                                                                                                                                                      \
-      auto slot_ = function_t<R(A...) NOEXCEPT>::template bind<f>();                                                                                 \
+      auto slot_ = slot_t::template bind<f>();                                                                                 \
                                                                                                                                                      \
       auto it = std::find_if(connections_.begin(), connections_.end(),                                                                               \
                              [&slot_](const auto &_connection) {                                                                                     \
@@ -388,7 +389,7 @@ template <typename T> class signal_t__;
     template <R (*f)(A...) NOEXCEPT> void disconnect() & {                                                                                             \
                                                                                                                                                      \
       auto _disconnect_slot =                                                                                                                        \
-          function_t<R(A...) NOEXCEPT>::template bind<f>();                                                                                          \
+          slot_t::template bind<f>();                                                                                          \
                                                                                                                                                      \
       auto it = std::find_if(connections_.begin(), connections_.end(),                                                                               \
                              [&_disconnect_slot](const auto &_connection) {                                                                          \
@@ -401,12 +402,23 @@ template <typename T> class signal_t__;
                                                                                                                                                      \
     template <R (*f)(A...) NOEXCEPT> void disconnect() && = delete;                                                                                  \
                                                                                                                                                      \
-    template <typename T /*// should add is_function<T> OR is_function_object<T> for*/                                                               \
-                       /*// this*/                                                                                                                   \
-            >                                                                                                                                        \
-  [[nodiscard]] connection_t connect(T &&o) & {                                                                                                        \
+    template <typename T>                                                                                                                            \
+  [[nodiscard]] connection_t connect(T &&o) & {                                                                                                      \
                                                                                                                                                      \
-      slot_t slot_(std::forward<T>(o));                                                                                                              \
+      static_assert( std::is_invocable_r_v<R, std::remove_pointer_t<T>, A...>,                                                                       \
+                     "Type 'T' can not be invocable with these arguments like a slot !" );                                                           \
+                                                                                                                                                     \
+      using raw_of_T_t__ = std::remove_reference_t<std::remove_pointer_t<T>>;                                                                        \
+      slot_t slot_;                                                                                                                                               \
+      if constexpr ((std::is_pointer_v<T> ||                                                                                                         \
+                     std::is_rvalue_reference_v<T>) &&                                                                                               \
+                     (signal_t__::is_function_object_t__<raw_of_T_t__>::value)) {                                                                           \
+        slot_ = slot_t::template bind<raw_of_T_t__, &raw_of_T_t__::operator()>(o);                                                            \
+      }                                                                                                                                              \
+      else                                                                                                                                           \
+      {                                                                                                                                              \
+        slot_ = std::forward<T>(o);                                                                                                           \
+      }                                                                                                                                              \
                                                                                                                                                      \
       icontext_t *ctx_ = nullptr;                                                                                                                    \
                                                                                                                                                      \
@@ -440,7 +452,7 @@ template <typename T> class signal_t__;
       static_assert(std::is_same<R, void>::value,                                                                                                    \
                     "Return value of signal must be only 'void' type !");                                                                            \
                                                                                                                                                      \
-      auto slot_ = function_t<R(A...) noexcept>::template bind<                                                                                      \
+      auto slot_ = slot_t::template bind<                                                                                      \
           signal_t__, &signal_t__::operator()>(&signal);                                                                                             \
                                                                                                                                                      \
       auto it = std::find_if(connections_.begin(), connections_.end(),                                                                               \
