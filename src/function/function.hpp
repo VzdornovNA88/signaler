@@ -162,10 +162,13 @@ public:                                                                         
   function_t__(std::nullptr_t const) noexcept {}                                                                                                   \
   function_t__(int const) noexcept {}                                                                                                              \
                                                                                                                                                    \
-  /*// should add is_function<T> OR is_function_object<T> for this*/                                                                               \
+                                                                                                                                                   \
   template <typename T, typename functor_t__ = typename std::decay<T>::type,                                                                       \
             typename = is_not_function_t__<T>>                                                                                                     \
   function_t__(T &&f) noexcept : store(std::forward<T>(f)) {                                                                                       \
+                                                                                                                                                   \
+    static_assert( std::is_invocable_r_v<R, std::remove_pointer_t<functor_t__>, A...>,                                                             \
+                   "Type 'T' can not be invocable with these arguments !" );                                                                       \
                                                                                                                                                    \
     if (store != nullptr)                                                                                                                          \
       aplly = p_aplly<functor_t__>;                                                                                                                \
@@ -219,6 +222,14 @@ public:                                                                         
   function_t__ &operator=(T &&f) noexcept {                                                                                                        \
                                                                                                                                                    \
     using functor_t__ = typename std::decay<T>::type;                                                                                              \
+    using base_type_fun_t__ = typename std::remove_pointer_t<functor_t__>;                                                                         \
+    static_assert( std::is_invocable_r_v<R, base_type_fun_t__, A...>,                                                                              \
+                   "Type 'T' can not be invocable with these arguments !" );                                                                       \
+                                                                                                                                                   \
+    static_assert( check_t__<!std::is_class_v<base_type_fun_t__> || /*std::is_nothrow_move_assignable_v<base_type_fun_t__> &&*/                    \
+                             std::is_nothrow_destructible_v<base_type_fun_t__>>::value,                                                            \
+                   "In function_t__ &operator=(T &&f) noexcept : "                                                                                 \
+                   "Type 'T' does not satisfy the requirements : is_nothrow_move_assignable and is_nothrow_destructible !" );                      \
                                                                                                                                                    \
     store = std::forward<T>(f);                                                                                                                    \
                                                                                                                                                    \
