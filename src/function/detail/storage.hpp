@@ -39,9 +39,15 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <atomic>
+
 namespace signaler::detail {
 
-template <size_t SMALL_OPT_SIZE> class storage_t__ final {
+enum class atomicity_policy_t : unsigned char { USUAL = 0, ATOMIC = 1 };
+
+template <size_t SMALL_OPT_SIZE,
+          atomicity_policy_t ATOMICITY_POLICY = atomicity_policy_t::USUAL>
+class storage_t__ final {
 
   static_assert(SMALL_OPT_SIZE >= 16,
                 "The NTT parameter SMALL_OPT_SIZE in storage frame of "
@@ -84,8 +90,11 @@ template <size_t SMALL_OPT_SIZE> class storage_t__ final {
 
   struct big_object_t__ final : control_t__ {
 
+    using counter_t__ =
+        std::conditional_t<atomicity_policy_t::ATOMIC == ATOMICITY_POLICY,
+                           std::atomic<size_t>, size_t>;
     struct big_aligned_storage_t__ {
-      size_t cnt_ = 0;
+      counter_t__ cnt_ = 1;
       void *object_ = nullptr;
     };
 
@@ -99,7 +108,7 @@ template <size_t SMALL_OPT_SIZE> class storage_t__ final {
       else {
         switch (op) {
         case control_t__::operation_t__::CSTR: {
-          new (to) big_aligned_storage_t__{1, nullptr};
+          new (to) big_aligned_storage_t__;
           auto big_obj_ =
               std::launder(reinterpret_cast<big_aligned_storage_t__ *>(to));
           big_obj_->object_ = operator new (sizeof(T), std::nothrow_t{});
@@ -108,21 +117,35 @@ template <size_t SMALL_OPT_SIZE> class storage_t__ final {
                                          //! throws any exception
         } break;
         case control_t__::operation_t__::COPY: {
-          std::memcpy(to, from, sizeof(big_aligned_storage_t__));
-          ++(std::launder(reinterpret_cast<big_aligned_storage_t__ *>(to))
-                 ->cnt_);
+          new (to) big_aligned_storage_t__;
+          auto to_ =
+              std::launder(reinterpret_cast<big_aligned_storage_t__ *>(to));
+          auto from_ =
+              std::launder(reinterpret_cast<big_aligned_storage_t__ *>(from));
+          to_->object_ = from_->object_;
+          to_->cnt_ = from_->cnt_++;
         } break;
         case control_t__::operation_t__::MOVE: {
-          std::memcpy(to, from, sizeof(big_aligned_storage_t__));
+          new (to) big_aligned_storage_t__;
+          auto to_ =
+              std::launder(reinterpret_cast<big_aligned_storage_t__ *>(to));
+          auto from_ =
+              std::launder(reinterpret_cast<big_aligned_storage_t__ *>(from));
+          to_->object_ = from_->object_;
+          if constexpr (atomicity_policy_t::ATOMIC == ATOMICITY_POLICY) {
+            to_->cnt_ = from_->cnt_.load();
+            std::cout << "MOVE load()";
+          }
+          else {
+            to_->cnt_ = from_->cnt_;
+          }
         } break;
         case control_t__::operation_t__::DSTR: {
-          auto big_obj_ =
+          auto from_ =
               std::launder(reinterpret_cast<big_aligned_storage_t__ *>(from));
-          auto &cnt_ = big_obj_->cnt_;
-          --cnt_;
-          if (cnt_ == 0)
-            delete static_cast<T *>(big_obj_->object_);
-          big_obj_->~big_aligned_storage_t__();
+          if (--from_->cnt_ == 0)
+            delete static_cast<T *>(from_->object_);
+          from_->~big_aligned_storage_t__();
 
         } break;
         case control_t__::operation_t__::COMP: {
@@ -220,7 +243,7 @@ template <size_t SMALL_OPT_SIZE> class storage_t__ final {
             return false;
           static_assert(std::is_nothrow_copy_constructible_v<T>,
                         "Type 'T' in small_type_t__ of storage_t__ doesn't "
-                        "require for is_nothrow_copy_constructible");  
+                        "require for is_nothrow_copy_constructible");
           ::new (to_) T(*static_cast<T *>(from));
         } break;
         case control_t__::operation_t__::MOVE: {

@@ -76,7 +76,7 @@ template <typename T> class signal_t__;
   template <typename R, typename... A>                                                                                                               \
   class signal_t__<R(A...) CONST VOLATILE REF NOEXCEPT> final {                                                                                      \
   public:                                                                                                                                            \
-    using slot_t = function_t<R(A...) CONST VOLATILE REF NOEXCEPT>;                                                                                  \
+    using slot_t = function_atomic_t<R(A...) CONST VOLATILE REF NOEXCEPT>;                                                                                  \
     class connection_t;                                                                                                                              \
                                                                                                                                                      \
   private:                                                                                                                                           \
