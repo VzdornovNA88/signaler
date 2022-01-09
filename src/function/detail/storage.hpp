@@ -43,10 +43,10 @@
 
 namespace signaler::detail {
 
-enum class atomicity_policy_t : unsigned char { USUAL = 0, ATOMIC = 1 };
+enum class atomicity_policy_t : unsigned char { NON_ATOMIC = 0, ATOMIC = 1 };
 
 template <size_t SMALL_OPT_SIZE,
-          atomicity_policy_t ATOMICITY_POLICY = atomicity_policy_t::USUAL>
+          atomicity_policy_t ATOMICITY_POLICY = atomicity_policy_t::NON_ATOMIC>
 class storage_t__ final {
 
   static_assert(SMALL_OPT_SIZE >= 16,
@@ -134,7 +134,6 @@ class storage_t__ final {
           to_->object_ = from_->object_;
           if constexpr (atomicity_policy_t::ATOMIC == ATOMICITY_POLICY) {
             to_->cnt_ = from_->cnt_.load();
-            std::cout << "MOVE load()";
           }
           else {
             to_->cnt_ = from_->cnt_;

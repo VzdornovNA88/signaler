@@ -180,6 +180,7 @@ using object_in_worker_thread_t = signaler::object_t<&context_worker_thread>;
 struct class_example_2 : object_in_worker_thread_t/*signaler::object_t<&context_worker_thread>*/ {
 
 	std::string class_ctx{ " / here is context of class_example_2 " };
+	unsigned long long cnt = 0;
 
 	void foo_const(std::string_view s) const
 	{
@@ -218,6 +219,12 @@ struct class_example_2 : object_in_worker_thread_t/*signaler::object_t<&context_
 		auto res = b(2);
 		std::cout << "{ 'void class_example_2::void foo_B(B&& b)' } : input parameter = " << res
 			<< " in thread id: " << std::this_thread::get_id();
+	}
+    virtual ~class_example_2() noexcept {}
+	int operator()(int a) {
+		cnt= a+1;
+		std::cout << "B::operator(): " << cnt << std::endl;
+		return cnt;
 	}
 };
 
@@ -687,6 +694,10 @@ int main([[maybe_unused]]int argc, [[maybe_unused]]char* argv[])
         B b3{1};
         foo_B_1_rvref(std::move(b3));
     }
+
+    signal_t<int(int)> call_operator_from_class_example_2;
+	auto connection_class_example_2 = call_operator_from_class_example_2.connect(class_example_2{});
+	call_operator_from_class_example_2(777);
 
     std::this_thread::sleep_for(std::chrono::seconds(10));
 

@@ -59,7 +59,7 @@ std::error_code make_error_code(function_status_t);
 namespace detail {
 
 template <typename T, size_t SMALL_OPT_SIZE,
-          atomicity_policy_t ATOMICITY_POLICY = atomicity_policy_t::USUAL> class function_t__;
+          atomicity_policy_t ATOMICITY_POLICY> class function_t__;
 
 
 #define DEFINE_FUNCTION_VARIANT(CONST, VOLATILE, NOEXCEPT, REF)                                                                                    \
@@ -373,14 +373,10 @@ DEFINE_FUNCTION_VARIANT(, , , &&)
 
 
 } // namespace detail
-
-template <typename SIGNATURE, size_t SMALL_OPT_SIZE = 16>
-using function_t = detail::function_t__<SIGNATURE, SMALL_OPT_SIZE>;
-
-template <typename SIGNATURE, size_t SMALL_OPT_SIZE = 16>
-using function_atomic_t =
-    detail::function_t__<SIGNATURE, SMALL_OPT_SIZE,
-                         signaler::detail::atomicity_policy_t::ATOMIC>;
+                         
+template <typename SIGNATURE, size_t SMALL_OPT_SIZE = 16, detail::atomicity_policy_t ATOMICITY_POLICY = signaler::detail::atomicity_policy_t::NON_ATOMIC>
+using function_t =
+    detail::function_t__<SIGNATURE, SMALL_OPT_SIZE,ATOMICITY_POLICY>;
 
 } // namespace signaler
 
