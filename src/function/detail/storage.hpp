@@ -163,7 +163,7 @@ class storage_t__ final {
         }
       }
       return true;
-    };
+    }
 
     template <typename T> big_object_t__(T object) noexcept {
       control_t__::operation_dispatch_ = vtable<T>;
@@ -261,7 +261,7 @@ class storage_t__ final {
         }
         return true;
       }
-    };
+    }
 
     template <typename T> small_object_t__(T object) noexcept {
       control_t__::operation_dispatch_ = vtable<T>;
@@ -328,8 +328,8 @@ public:
   storage_t__() noexcept = default;
   storage_t__(std::nullptr_t const) noexcept : storage_t__() {}
   ~storage_t__() noexcept = default;
-  storage_t__(storage_t__ const &s) noexcept = default;
-  storage_t__ &operator=(storage_t__ const &s) noexcept = default;
+  storage_t__(storage_t__ const &s) noexcept : store(s.store)  {};
+  storage_t__ &operator=(storage_t__ const &s) noexcept { store = s.store; return *this; };
   storage_t__(storage_t__ &&s) noexcept = default;
   storage_t__ &operator=(storage_t__ &&s) noexcept = default;
   storage_t__ &operator=(std::nullptr_t const) noexcept {
