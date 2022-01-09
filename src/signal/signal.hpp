@@ -517,7 +517,7 @@ template <typename T> class signal_t__;
                                                                                                                                                      \
           if constexpr (sizeof...(p) > 0) {                                                                                                          \
                                                                                                                                                      \
-            detail::event_t ev_([args_ = std::make_tuple(                                                                                            \
+            task_t<> task_([args_ = std::make_tuple(                                                                                            \
                                      arg_t__<A>{std::forward<A>(p)}...),                                                                             \
                                  slot_ = connection_.slot_,                                                                                          \
                                  result_weak_ = result_weak_]() mutable {                                                                            \
@@ -530,8 +530,8 @@ template <typename T> class signal_t__;
               }                                                                                                                                      \
             });                                                                                                                                      \
                                                                                                                                                      \
-            if (ev_) {                                                                                                                               \
-              auto res_ = ctx_->send(std::move(ev_));                                                                                                \
+            if (task_) {                                                                                                                               \
+              auto res_ = ctx_->schedule(std::move(task_));                                                                                                \
                                                                                                                                                      \
               if (res_.status() == detail::queue_status_t::Q_OVERFLOW) {                                                                             \
                 connection_.result_->status_ =                                                                                                       \
@@ -539,7 +539,7 @@ template <typename T> class signal_t__;
               }                                                                                                                                      \
             }                                                                                                                                        \
           } else {                                                                                                                                   \
-            detail::event_t ev_(                                                                                                                     \
+            task_t<> task_(                                                                                                                     \
                 [slot_ = connection_.slot_, result_weak_ = result_weak_]() {                                                                         \
                   if (auto result_ = result_weak_.lock()) {                                                                                          \
                     if constexpr (std::is_same_v<R, void>)                                                                                           \
@@ -550,8 +550,8 @@ template <typename T> class signal_t__;
                   }                                                                                                                                  \
                 });                                                                                                                                  \
                                                                                                                                                      \
-            if (ev_) {                                                                                                                               \
-              auto res_ = ctx_->send(std::move(ev_));                                                                                                \
+            if (task_) {                                                                                                                               \
+              auto res_ = ctx_->schedule(std::move(task_));                                                                                                \
                                                                                                                                                      \
               if (res_.status() == detail::queue_status_t::Q_OVERFLOW) {                                                                             \
                 connection_.result_->status_ =                                                                                                       \

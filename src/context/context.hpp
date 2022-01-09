@@ -37,14 +37,22 @@
 
 namespace signaler {
 
+// template<typename slot_t, typename result_t, typename ... args_t>
+// class task_t {
+//   std::tuple<args_t...> args;
+//   result_t result
+// };
+template<size_t SIZE = 128>
+using task_t = typename signaler::function_t<void(), SIZE>;
+
 struct icontext_t {
   virtual ~icontext_t() noexcept {}
-  virtual result_t<void> send(signaler::detail::event_t &&e_) noexcept = 0;
+  virtual result_t<void> schedule(task_t<>&& task_) noexcept = 0;
 };
 
 template <size_t len = 16> class context_t final : public icontext_t {
 
-  using queue_t__ = signaler::detail::event_queue_t<len>;
+  using queue_t__ = signaler::detail::queue_t<task_t<>,len>;
   queue_t__ queue_;
 
 public:
@@ -56,12 +64,12 @@ public:
     result_t<void> res_;
 
     for (;;) {
-      auto event_ = queue_.wait_pop();
+      result_t<task_t<>> q_item_ = queue_.wait_pop();
 
-      if (event_)
-        event_.value()();
+      if (q_item_)
+        q_item_.value()();
 
-      res_ = event_.status();
+      res_ = q_item_.status();
       if (!res_)
         break;
     }
@@ -70,8 +78,8 @@ public:
   }
 
   virtual result_t<void>
-  send(signaler::detail::event_t &&e_) noexcept final override {
-    return queue_.push(std::move(e_));
+  schedule(task_t<>&& task_) noexcept final override {
+    return queue_.push(std::move(task_));
   }
 };
 } // namespace signaler
