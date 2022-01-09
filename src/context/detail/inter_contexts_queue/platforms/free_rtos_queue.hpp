@@ -106,10 +106,10 @@ public:
       if (back_ == end(storage_))
         back_ = begin(storage_);
 
-      return {std::move(*res_), queue_status_t::Q_READY};
+      return {std::move(*res_)};
     } catch (...) {
 
-      return {{}, queue_status_t::Q_POP_LOCK_ERROR};
+      return {queue_status_t::Q_POP_LOCK_ERROR};
     }
   }
 
@@ -122,7 +122,7 @@ public:
       return (front_ == back_);
     } catch (...) {
 
-      return {{}, queue_status_t::Q_IS_EMPTY_LOCK_ERROR};
+      return {queue_status_t::Q_IS_EMPTY_LOCK_ERROR};
     }
   }
 

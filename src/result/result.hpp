@@ -34,63 +34,63 @@
 
 #include <system_error>
 #include <type_traits>
+#include <variant>
 
 namespace signaler {
 
 template <typename T> class result_t {
 
-  static_assert(
-      std::is_nothrow_default_constructible<T>::value,
-      "The type T does not satisfy is_nothrow_default_constructible as type of result_t");
+  static_assert(std::is_nothrow_default_constructible<T>::value,
+                "The type T does not satisfy is_nothrow_default_constructible "
+                "as type of result_t");
   static_assert(std::is_nothrow_copy_constructible<T>::value,
-                "The type T does not satisfy is_nothrow_copy_constructible as type of result_t");
+                "The type T does not satisfy is_nothrow_copy_constructible as "
+                "type of result_t");
   static_assert(std::is_nothrow_move_constructible<T>::value,
-                "The type T does not satisfy is_nothrow_move_constructible as type of result_t");
+                "The type T does not satisfy is_nothrow_move_constructible as "
+                "type of result_t");
   static_assert(std::is_nothrow_copy_assignable<T>::value,
-                "The type T does not satisfy is_nothrow_copy_assignable as type of result_t");
+                "The type T does not satisfy is_nothrow_copy_assignable as "
+                "type of result_t");
   static_assert(std::is_nothrow_move_assignable<T>::value,
-                "The type T does not satisfy is_nothrow_move_assignable as type of result_t");
+                "The type T does not satisfy is_nothrow_move_assignable as "
+                "type of result_t");
   static_assert(std::is_nothrow_destructible<T>::value,
-                "The type T does not satisfy is_nothrow_destructible as type of result_t");
+                "The type T does not satisfy is_nothrow_destructible as type "
+                "of result_t");
   static_assert(!std::is_lvalue_reference<T>::value,
-                "The type T does not satisfy NOT is_lvalue_reference as type of result_t");
+                "The type T does not satisfy NOT is_lvalue_reference as type "
+                "of result_t");
 
-  T val_{};
-  std::error_code status_;
+  enum thing_t__ : unsigned char {
+    VALUE = 0,
+    ERROR = 1,
+  };
+  std::variant<T, std::error_code> storage_;
 
 public:
-  result_t(T &v_, std::error_code &s_) noexcept : val_(v_), status_(s_) {}
+  result_t(T &&v_) noexcept : storage_(std::forward<T>(v_)) {}
 
-  result_t(T &&v_, std::error_code &s_) noexcept
-      : val_(std::forward<T>(v_)), status_(s_) {}
-
-  result_t(T &v_, std::error_code s_) noexcept : val_(v_), status_(s_) {}
-
-  result_t(T &&v_, std::error_code s_) noexcept
-      : val_(std::forward<T>(v_)), status_(s_) {}
-
-  result_t(T &&v_) noexcept : val_(std::forward<T>(v_)) {}
-
-  result_t(T &v_) noexcept : val_(v_) {}
+  result_t(T &v_) noexcept : storage_(v_) {}
 
   result_t &operator=(T &&v_) noexcept {
-    val_ = std::forward<T>(v_);
+    storage_ = std::forward<T>(v_);
     return *this;
   };
 
   result_t &operator=(T &v_) noexcept {
-    val_ = v_;
+    storage_ = v_;
     return *this;
   };
 
-  result_t(std::error_code &s_) noexcept : status_(s_) {}
+  result_t(std::error_code &s_) noexcept : storage_(s_) {}
 
-  result_t &operator=(std::error_code &s_) noexcept { status_ = s_; };
+  result_t &operator=(std::error_code &s_) noexcept { storage_ = s_; };
 
-  result_t(std::error_code s_) noexcept : status_(s_) {}
+  result_t(std::error_code s_) noexcept : storage_(s_) {}
 
   result_t &operator=(std::error_code s_) noexcept {
-    status_ = s_;
+    storage_ = s_;
     return *this;
   };
 
@@ -101,13 +101,55 @@ public:
   result_t &operator=(const result_t &) noexcept = default;
   result_t &operator=(result_t &&) noexcept = default;
 
-  auto value() const noexcept { return val_; }
-  auto status() const noexcept { return status_; }
-  operator bool() const noexcept { return !status_; }
+  template <typename callback_t>
+  auto then(callback_t &&callback_) const noexcept {
+    using ret_t__ = typename std::invoke_result<callback_t, T>::type;
+    static_assert(!std::is_same_v<ret_t__, void>,
+                  "callback_t shall not return void type");
+    static_assert(std::is_invocable_r_v<ret_t__, callback_t, T>,
+                  "callback_t type is not invocable with argument = [T]");
+
+    if ((storage_.index() == VALUE))
+      return result_t<ret_t__>{callback_(*std::get_if<VALUE>(&storage_))};
+    else
+      return result_t<ret_t__>{error()};
+  }
+
+  template <typename callback_t>
+  auto catch_error(callback_t &&callback_) const noexcept {
+    using ret_t__ =
+        typename std::invoke_result<callback_t, std::error_code>::type;
+    static_assert(std::is_same_v<ret_t__, void>,
+                  "callback_t shall return void type");
+    static_assert(std::is_invocable_r_v<ret_t__, callback_t, std::error_code>,
+                  "callback_t type is not invocable with argument = [T]");
+
+    if (!(storage_.index() == VALUE)) {
+      auto error_ = *std::get_if<ERROR>(&storage_);
+      callback_(error_);
+      return result_t<ret_t__>{std::error_code{error_}};
+    } else
+      return result_t<ret_t__>{};
+  }
+
+  auto value() const noexcept {
+    if (storage_.index() == VALUE)
+      return *std::get_if<VALUE>(&storage_);
+    else
+      return T{};
+  }
+  auto error() const noexcept {
+    if (storage_.index() == ERROR)
+      return *std::get_if<ERROR>(&storage_);
+    else
+      return std::error_code{};
+  }
+  operator bool() const noexcept { return (storage_.index() == VALUE); }
 
   bool operator==(const result_t<T> &r) const noexcept {
 
-    return ((val_ == r.val_) && (status_ == r.status_));
+    return ((storage_.index() == r.storage_.index()) &&
+            (storage_ == r.storage_));
   }
 };
 
@@ -135,8 +177,21 @@ public:
     return *this;
   };
 
-  auto status() const noexcept { return status_; }
+  auto error() const noexcept { return status_; }
   operator bool() const noexcept { return !status_; }
+
+  template <typename callback_t>
+  auto catch_error(callback_t &&callback_) const noexcept {
+    using ret_t__ =
+        typename std::invoke_result<callback_t, std::error_code>::type;
+    static_assert(std::is_same_v<ret_t__, void>,
+                  "callback_t shall return void type");
+    static_assert(std::is_invocable_r_v<ret_t__, callback_t, std::error_code>,
+                  "callback_t type is not invocable with argument = [T]");
+
+    callback_(status_);
+    return result_t<ret_t__>{status_};
+  }
 
   bool operator==(const result_t<void> &r) const noexcept {
 

@@ -379,7 +379,7 @@ int main([[maybe_unused]]int argc, [[maybe_unused]]char* argv[])
 	auto result_of_foo_string_12_construct = foo_string_12_construct("call { 'foo_string_12_construct' ; 'class_example_1::foo_const' } function_t from class function const (created by constructor)");
 
 	std::cout << "call { 'foo_string_12_construct' ; 'class_example_1::foo_const' } function_t from class function const (created by constructor) ----> "
-		<< result_of_foo_string_12_construct.status().message().c_str() << std::endl;
+		<< result_of_foo_string_12_construct.error().message().c_str() << std::endl;
 
 	std::cout << "---------------------------------------------------------------" << std::endl;
 
@@ -399,7 +399,7 @@ int main([[maybe_unused]]int argc, [[maybe_unused]]char* argv[])
 	auto result_foo_string_13 = foo_string_13("");
 
 	std::cout << "call { 'foo_string_13' ; 'nullptr' } function_t from nullptr (created by dynamic bind function and copy constructor) ----> " 
-		<< result_foo_string_13.status().message().c_str() << std::endl;
+		<< result_foo_string_13.error().message().c_str() << std::endl;
 
 	std::cout << "---------------------------------------------------------------" << std::endl;
 	
@@ -408,7 +408,7 @@ int main([[maybe_unused]]int argc, [[maybe_unused]]char* argv[])
 	auto result_foo_string_14 = foo_string_14("");
 
 	std::cout << "call { 'foo_string_14' ; '0' } function_t from '0' (created by dynamic bind function and copy constructor) ----> "
-		<< result_foo_string_14.status().message().c_str() << std::endl;
+		<< result_foo_string_14.error().message().c_str() << std::endl;
 
 	std::cout << "---------------------------------------------------------------" << std::endl;
 	
@@ -417,7 +417,7 @@ int main([[maybe_unused]]int argc, [[maybe_unused]]char* argv[])
 	auto result_foo_string_15 = foo_string_15("");
 
 	std::cout << "call { 'foo_string_15' ; 'default(nullptr)' } function_t from 'default(nullptr)' (created by default constructor) ----> "
-		<< result_foo_string_15.status().message().c_str() << std::endl;
+		<< result_foo_string_15.error().message().c_str() << std::endl;
 
 	std::cout << "---------------------------------------------------------------" << std::endl;
 
@@ -444,7 +444,7 @@ int main([[maybe_unused]]int argc, [[maybe_unused]]char* argv[])
 	auto result_foo_string_16 = foo_string_16("");
 
 	std::cout << "2. call { 'foo_string_16 AFTER std::move' ; '[](std::string_view s) {foo(s);}' } function_t from lambda expression without context (created by constructor of callable object) ----> "
-		<< result_foo_string_16.status().message().c_str() << std::endl;
+		<< result_foo_string_16.error().message().c_str() << std::endl;
 
 	temp("3. call { 'TEMP of foo_string_16 AFTER std::move' ; '[](std::string_view s) {foo(s);}' } function_t from lambda expression without context (created by constructor of callable object)");
 

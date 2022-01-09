@@ -252,7 +252,7 @@ int main([[maybe_unused]]int argc, [[maybe_unused]]char* argv[])
 
 	auto result_foo_string_1 = connection_foo_string_1.get_result();
 
-	std::cout << "2. Getting the result of signal foo_string_1 ---> " << result_foo_string_1.status().message().c_str() << std::endl;
+	std::cout << "2. Getting the result of signal foo_string_1 ---> " << result_foo_string_1.error().message().c_str() << std::endl;
 
 	std::cout << std::endl;
 
@@ -298,7 +298,7 @@ int main([[maybe_unused]]int argc, [[maybe_unused]]char* argv[])
 
 	auto result_foo_string_3 = connection_foo_string_3.get_result();
 
-	std::cout << "2. Getting the result of signal foo_string_3 ---> " << result_foo_string_3.status().message().c_str() << std::endl;
+	std::cout << "2. Getting the result of signal foo_string_3 ---> " << result_foo_string_3.error().message().c_str() << std::endl;
 
 	std::cout << std::endl;
 
@@ -373,7 +373,7 @@ int main([[maybe_unused]]int argc, [[maybe_unused]]char* argv[])
 
 	auto result_foo_string_5 = connection_foo_string_5.get_result();
 
-	std::cout << "2. Getting the result of signal foo_string_5 ---> " << result_foo_string_5.status().message().c_str() << std::endl;
+	std::cout << "2. Getting the result of signal foo_string_5 ---> " << result_foo_string_5.error().message().c_str() << std::endl;
 
 	std::cout << std::endl;
 
@@ -448,7 +448,7 @@ int main([[maybe_unused]]int argc, [[maybe_unused]]char* argv[])
 
 	auto result_foo_string_7 = connection_foo_string_7.get_result();
 
-	std::cout << "2. Getting the result of signal foo_string_7 ---> " << result_foo_string_7.status().message().c_str() << std::endl;
+	std::cout << "2. Getting the result of signal foo_string_7 ---> " << result_foo_string_7.error().message().c_str() << std::endl;
 
 	std::cout << std::endl;
 
@@ -504,7 +504,7 @@ int main([[maybe_unused]]int argc, [[maybe_unused]]char* argv[])
 	foo_string_9("");
 
 	std::cout << "2. signal { 'foo_string_9 AFTER std::move' ; '[](std::string_view s) {foo(s);}' } ----> "
-		<< connection_foo_string_9.get_result().status().message().c_str() << std::endl;
+		<< connection_foo_string_9.get_result().error().message().c_str() << std::endl;
 
 	temp("3. signal { 'TEMP of foo_string_9 AFTER std::move' ; '[](std::string s) {foo(s);}' }");
 
@@ -646,7 +646,13 @@ int main([[maybe_unused]]int argc, [[maybe_unused]]char* argv[])
 
 	foo_int_1(1);
 
-	std::cout << connection_foo_int_1.get_result().value() << std::endl;
+	std::cout << 
+	    connection_foo_int_1.get_result()
+		                    .then( [](auto value_) {
+		                    	return value_ + 555;
+		                    })
+							.value()
+			  << std::endl;
 
 	std::cout << std::endl;
 
@@ -656,7 +662,12 @@ int main([[maybe_unused]]int argc, [[maybe_unused]]char* argv[])
 
 	std::cout << std::endl;
 
-	std::cout << "AFTER disconnect() ----> connection_foo_int_1.get_result().status().message() : " << connection_foo_int_1.get_result().status().message().c_str() << std::endl;
+	std::cout << "AFTER disconnect() ----> connection_foo_int_1.get_result().error().message() : " 
+	<< connection_foo_int_1.get_result()
+	.catch_error([](auto error_code) {
+		std::cout<<"connection_foo_int_1 ---> catch error = "<<error_code.message().data()<<std::endl;
+	})
+	.error().message().c_str() << std::endl;
 
 	std::cout << std::endl;
 

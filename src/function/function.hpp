@@ -94,7 +94,7 @@ class function_t__<R(A...) CONST VOLATILE REF NOEXCEPT, SMALL_OPT_SIZE,ATOMICITY
   p_aplly([[maybe_unused]] CONST VOLATILE detail::storage_t__<SMALL_OPT_SIZE,ATOMICITY_POLICY> *const,                                                              \
           [[maybe_unused]] A &&...args) noexcept {                                                                                                 \
                                                                                                                                                    \
-    return {status};                                                                                                                               \
+    return std::error_code{status};                                                                                                                               \
   }                                                                                                                                                \
                                                                                                                                                    \
   template <R (*f)(A...) NOEXCEPT>                                                                                                                 \
@@ -110,9 +110,9 @@ class function_t__<R(A...) CONST VOLATILE REF NOEXCEPT, SMALL_OPT_SIZE,ATOMICITY
                                                                                                                                                    \
     if constexpr (std::is_same_v<R, void>) {                                                                                                       \
       f(std::forward<A>(args)...);                                                                                                                 \
-      return {function_status_t::F_CALL_SUCCESS};                                                                                                  \
+      return std::error_code{function_status_t::F_CALL_SUCCESS};                                                                                                  \
     } else                                                                                                                                         \
-      return {f(std::forward<A>(args)...), function_status_t::F_CALL_SUCCESS};                                                                     \
+      return {f(std::forward<A>(args)...)};                                                                     \
   }                                                                                                                                                \
                                                                                                                                                    \
   template <typename T, R (T::*m)(A...) CONST VOLATILE REF NOEXCEPT>                                                                               \
@@ -128,10 +128,9 @@ class function_t__<R(A...) CONST VOLATILE REF NOEXCEPT, SMALL_OPT_SIZE,ATOMICITY
                                                                                                                                                    \
     if constexpr (std::is_same_v<R, void>) {                                                                                                       \
       ((const_cast<detail::storage_t__<SMALL_OPT_SIZE,ATOMICITY_POLICY> *const>(s)->template get<T *>())->*m)(std::forward<A>(args)...);                            \
-      return {function_status_t::F_CALL_SUCCESS};                                                                                                  \
+      return std::error_code{function_status_t::F_CALL_SUCCESS};                                                                                                  \
     } else                                                                                                                                         \
-      return {((const_cast<detail::storage_t__<SMALL_OPT_SIZE,ATOMICITY_POLICY> *const>(s)->template get<T *>())->*m)(std::forward<A>(args)...),                    \
-              function_status_t::F_CALL_SUCCESS};                                                                                                  \
+      return {((const_cast<detail::storage_t__<SMALL_OPT_SIZE,ATOMICITY_POLICY> *const>(s)->template get<T *>())->*m)(std::forward<A>(args)...)};                                                                                                  \
   }                                                                                                                                                \
                                                                                                                                                    \
   template <typename T>                                                                                                                            \
@@ -145,10 +144,9 @@ class function_t__<R(A...) CONST VOLATILE REF NOEXCEPT, SMALL_OPT_SIZE,ATOMICITY
                                                                                                                                                    \
     if constexpr (std::is_same_v<R, void>) {                                                                                                       \
       (*const_cast<detail::storage_t__<SMALL_OPT_SIZE,ATOMICITY_POLICY> *const>(s)->template get<T>())(std::forward<A>(args)...);                                   \
-      return {function_status_t::F_CALL_SUCCESS};                                                                                                  \
+      return std::error_code{function_status_t::F_CALL_SUCCESS};                                                                                                  \
     } else                                                                                                                                         \
-      return {(*const_cast<detail::storage_t__<SMALL_OPT_SIZE,ATOMICITY_POLICY> *const>(s)->template get<T>())(std::forward<A>(args)...),                           \
-              function_status_t::F_CALL_SUCCESS};                                                                                                  \
+      return {(*const_cast<detail::storage_t__<SMALL_OPT_SIZE,ATOMICITY_POLICY> *const>(s)->template get<T>())(std::forward<A>(args)...)};                                                                                                  \
   }                                                                                                                                                \
                                                                                                                                                    \
   function_t__(void *const o, wraper_t__ const m) noexcept : aplly(m),store(o){}                                                                   \

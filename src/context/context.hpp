@@ -69,7 +69,7 @@ public:
       if (q_item_)
         q_item_.value()();
 
-      res_ = q_item_.status();
+      res_ = q_item_.error();
       if (!res_)
         break;
     }

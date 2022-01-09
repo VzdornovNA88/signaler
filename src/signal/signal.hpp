@@ -117,7 +117,7 @@ template <typename T> class signal_t__;
     template <typename T> class future_base_t__ {                                                                                                    \
       friend class signal_t__<R(A...) CONST VOLATILE REF NOEXCEPT>;                                                                                  \
                                                                                                                                                      \
-      result_t<T> status_{signal_status_t::S_CONNECTION_FAILED};                                                                                     \
+      result_t<T> status_{std::error_code{signal_status_t::S_CONNECTION_FAILED}};                                                                                     \
       bool is_connected{false};                                                                                                                      \
                                                                                                                                                      \
     protected:                                                                                                                                       \
@@ -152,12 +152,12 @@ template <typename T> class signal_t__;
                                                                                                                                                      \
           auto res_ = results_.push(v_.value());                                                                                                     \
                                                                                                                                                      \
-          if (res_.status() == detail::queue_status_t::Q_OVERFLOW)                                                                                   \
+          if (res_.error() == detail::queue_status_t::Q_OVERFLOW)                                                                                   \
             future_base_t__<T>::status_ =                                                                                                            \
-                signal_status_t::S_RESULT_QUEUE_OVERFLOW;                                                                                            \
-          else if (res_.status() == detail::queue_status_t::Q_PUSH_LOCK_ERROR)                                                                       \
+                std::error_code{signal_status_t::S_RESULT_QUEUE_OVERFLOW};                                                                                            \
+          else if (res_.error() == detail::queue_status_t::Q_PUSH_LOCK_ERROR)                                                                       \
             future_base_t__<T>::status_ =                                                                                                            \
-                signal_status_t::S_RESULT_QUEUE_ERROR_LOCK;                                                                                          \
+                std::error_code{signal_status_t::S_RESULT_QUEUE_ERROR_LOCK};                                                                                          \
         }                                                                                                                                            \
                                                                                                                                                      \
       public:                                                                                                                                        \
@@ -169,8 +169,8 @@ template <typename T> class signal_t__;
                                                                                                                                                      \
           auto res_ = results_.wait_pop();                                                                                                           \
                                                                                                                                                      \
-          if (res_.status() == detail::queue_status_t::Q_POP_LOCK_ERROR)                                                                             \
-            return {signal_status_t::S_RESULT_QUEUE_ERROR_LOCK};                                                                                     \
+          if (res_.error() == detail::queue_status_t::Q_POP_LOCK_ERROR)                                                                             \
+            return std::error_code{signal_status_t::S_RESULT_QUEUE_ERROR_LOCK};                                                                                     \
                                                                                                                                                      \
           future_base_t__<T>::status_ = res_.value();                                                                                                \
                                                                                                                                                      \
@@ -216,7 +216,7 @@ template <typename T> class signal_t__;
         }                                                                                                                                            \
                                                                                                                                                      \
         result_->is_connected = true;                                                                                                                \
-        result_->status_ = signal_status_t::S_READY;                                                                                                 \
+        /*result_->status_ = signal_status_t::S_READY;*/                                                                                                 \
       }                                                                                                                                              \
                                                                                                                                                      \
     public:                                                                                                                                          \
@@ -279,7 +279,7 @@ template <typename T> class signal_t__;
             p_future_ && p_future_->is_connected)                                                                                                    \
           return p_future_->get();                                                                                                                   \
         else                                                                                                                                         \
-          return {signal_status_t::S_CONNECTION_FAILED};                                                                                             \
+          return std::error_code{signal_status_t::S_CONNECTION_FAILED};                                                                                             \
       }                                                                                                                                              \
                                                                                                                                                      \
       bool is_connected() const noexcept {                                                                                                           \
@@ -500,7 +500,7 @@ template <typename T> class signal_t__;
                                                                                                                                                      \
       auto begin_ = std::begin(connections_);                                                                                                        \
       auto end_ = std::end(connections_);                                                                                                            \
-                                                                                                                                                     \
+                                                                                                                                                    \
       for (; begin_ != end_; ++begin_) {                                                                                                             \
                                                                                                                                                      \
         CONST auto &connection_ = *begin_;                                                                                                           \
@@ -533,9 +533,9 @@ template <typename T> class signal_t__;
             if (task_) {                                                                                                                               \
               auto res_ = ctx_->schedule(std::move(task_));                                                                                                \
                                                                                                                                                      \
-              if (res_.status() == detail::queue_status_t::Q_OVERFLOW) {                                                                             \
+              if (res_.error() == detail::queue_status_t::Q_OVERFLOW) {                                                                             \
                 connection_.result_->status_ =                                                                                                       \
-                    signal_status_t::S_SLOT_QUEUE_OVERFLOW;                                                                                          \
+                    std::error_code{signal_status_t::S_SLOT_QUEUE_OVERFLOW};                                                                                          \
               }                                                                                                                                      \
             }                                                                                                                                        \
           } else {                                                                                                                                   \
@@ -553,9 +553,9 @@ template <typename T> class signal_t__;
             if (task_) {                                                                                                                               \
               auto res_ = ctx_->schedule(std::move(task_));                                                                                                \
                                                                                                                                                      \
-              if (res_.status() == detail::queue_status_t::Q_OVERFLOW) {                                                                             \
+              if (res_.error() == detail::queue_status_t::Q_OVERFLOW) {                                                                             \
                 connection_.result_->status_ =                                                                                                       \
-                    signal_status_t::S_SLOT_QUEUE_OVERFLOW;                                                                                          \
+                    std::error_code{signal_status_t::S_SLOT_QUEUE_OVERFLOW};                                                                                          \
               }                                                                                                                                      \
             }                                                                                                                                        \
           }                                                                                                                                          \

@@ -85,10 +85,10 @@ public:
 
       event_.notify_one();
 
-      return {status_};
+      return std::error_code{status_};
     } catch (...) {
 
-      return {queue_status_t::Q_PUSH_LOCK_ERROR};
+      return std::error_code{queue_status_t::Q_PUSH_LOCK_ERROR};
     }
   }
 
@@ -106,10 +106,10 @@ public:
       if (back_ == end(storage_))
         back_ = begin(storage_);
 
-      return {std::move(*res_), queue_status_t::Q_READY};
+      return {std::move(*res_)};
     } catch (...) {
 
-      return {{}, queue_status_t::Q_POP_LOCK_ERROR};
+      return std::error_code{queue_status_t::Q_POP_LOCK_ERROR};
     }
   }
 
@@ -122,7 +122,7 @@ public:
       return (front_ == back_);
     } catch (...) {
 
-      return {{}, queue_status_t::Q_IS_EMPTY_LOCK_ERROR};
+      return std::error_code{queue_status_t::Q_IS_EMPTY_LOCK_ERROR};
     }
   }
 
