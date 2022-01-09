@@ -90,9 +90,10 @@ class storage_t__ final {
 
   struct big_object_t__ final : control_t__ {
 
+    using underline_counter_t__ = size_t;
     using counter_t__ =
         std::conditional_t<atomicity_policy_t::ATOMIC == ATOMICITY_POLICY,
-                           std::atomic<size_t>, size_t>;
+                           std::atomic<underline_counter_t__>, underline_counter_t__>;
     struct big_aligned_storage_t__ {
       counter_t__ cnt_ = 1;
       void *object_ = nullptr;
@@ -132,12 +133,7 @@ class storage_t__ final {
           auto from_ =
               std::launder(reinterpret_cast<big_aligned_storage_t__ *>(from));
           to_->object_ = from_->object_;
-          if constexpr (atomicity_policy_t::ATOMIC == ATOMICITY_POLICY) {
-            to_->cnt_ = from_->cnt_.load();
-          }
-          else {
-            to_->cnt_ = from_->cnt_;
-          }
+          to_->cnt_ = static_cast<underline_counter_t__>(from_->cnt_);
         } break;
         case control_t__::operation_t__::DSTR: {
           auto from_ =
