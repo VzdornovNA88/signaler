@@ -648,7 +648,7 @@ int main([[maybe_unused]]int argc, [[maybe_unused]]char* argv[])
 
 	std::cout << 
 	    connection_foo_int_1.get_result()
-		                    .then( [](auto value_) {
+		                    .then( [](auto value_) noexcept {
 		                    	return value_ + 555;
 		                    })
 							.value()
@@ -664,8 +664,9 @@ int main([[maybe_unused]]int argc, [[maybe_unused]]char* argv[])
 
 	std::cout << "AFTER disconnect() ----> connection_foo_int_1.get_result().error().message() : " 
 	<< connection_foo_int_1.get_result()
-	.catch_error([](auto error_code) {
+	.catch_error([](auto error_code) noexcept {
 		std::cout<<"connection_foo_int_1 ---> catch error = "<<error_code.message().data()<<std::endl;
+		return error_code;
 	})
 	.error().message().c_str() << std::endl;
 

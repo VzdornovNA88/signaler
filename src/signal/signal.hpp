@@ -106,7 +106,7 @@ template <typename T> class signal_t__;
                                                std::remove_reference_t<T>, T>>                                                                       \
     struct arg_t__ {                                                                                                                                 \
       T_ arg;                                                                                                                                        \
-      operator T_() {                                                                                                                                \
+      operator T_() noexcept {                                                                                                                       \
         if constexpr (!std::is_lvalue_reference_v<T>)                                                                                                \
           return std::move(arg);                                                                                                                     \
         else                                                                                                                                         \
@@ -152,12 +152,12 @@ template <typename T> class signal_t__;
                                                                                                                                                      \
           auto res_ = results_.push(v_.value());                                                                                                     \
                                                                                                                                                      \
-          if (res_.error() == detail::queue_status_t::Q_OVERFLOW)                                                                                   \
+          if (res_.error() == detail::queue_status_t::Q_OVERFLOW)                                                                                    \
             future_base_t__<T>::status_ =                                                                                                            \
-                std::error_code{signal_status_t::S_RESULT_QUEUE_OVERFLOW};                                                                                            \
-          else if (res_.error() == detail::queue_status_t::Q_PUSH_LOCK_ERROR)                                                                       \
+                std::error_code{signal_status_t::S_RESULT_QUEUE_OVERFLOW};                                                                           \
+          else if (res_.error() == detail::queue_status_t::Q_PUSH_LOCK_ERROR)                                                                        \
             future_base_t__<T>::status_ =                                                                                                            \
-                std::error_code{signal_status_t::S_RESULT_QUEUE_ERROR_LOCK};                                                                                          \
+                std::error_code{signal_status_t::S_RESULT_QUEUE_ERROR_LOCK};                                                                         \
         }                                                                                                                                            \
                                                                                                                                                      \
       public:                                                                                                                                        \
@@ -169,7 +169,7 @@ template <typename T> class signal_t__;
                                                                                                                                                      \
           auto res_ = results_.wait_pop();                                                                                                           \
                                                                                                                                                      \
-          if (res_.error() == detail::queue_status_t::Q_POP_LOCK_ERROR)                                                                             \
+          if (res_.error() == detail::queue_status_t::Q_POP_LOCK_ERROR)                                                                              \
             return std::error_code{signal_status_t::S_RESULT_QUEUE_ERROR_LOCK};                                                                                     \
                                                                                                                                                      \
           future_base_t__<T>::status_ = res_.value();                                                                                                \

@@ -50,8 +50,7 @@ template <size_t SMALL_OPT_SIZE,
 class storage_t__ final {
 
   static_assert(SMALL_OPT_SIZE >= 16,
-                "The NTT parameter SMALL_OPT_SIZE in storage frame of "
-                "function_t type shall be greater than or equal to 16 bytes !");
+                "The NTT parameter SMALL_OPT_SIZE for storage frame of shall be greater than or equal to 16 bytes !");
   struct control_t__ {
     struct small_t__ {
       std::byte array[SMALL_OPT_SIZE];
@@ -112,10 +111,10 @@ class storage_t__ final {
           new (to) big_aligned_storage_t__;
           auto big_obj_ =
               std::launder(reinterpret_cast<big_aligned_storage_t__ *>(to));
-          big_obj_->object_ = operator new (sizeof(T), std::nothrow_t{});
-          new (big_obj_->object_) T(std::move(
-              *static_cast<T *>(from))); //! ??? constructor of functor_t__ can
-                                         //! throws any exception
+          big_obj_->object_ = operator new (sizeof(T), std::nothrow_t{}); 
+          if(big_obj_->object_)
+            new (big_obj_->object_) T(std::move(
+                *static_cast<T *>(from))); 
         } break;
         case control_t__::operation_t__::COPY: {
           new (to) big_aligned_storage_t__;
@@ -136,6 +135,9 @@ class storage_t__ final {
           to_->cnt_ = static_cast<underline_counter_t__>(from_->cnt_);
         } break;
         case control_t__::operation_t__::DSTR: {
+          static_assert(std::is_nothrow_destructible_v<T>,
+                        "Type 'T' in big_object_t__ of storage_t__ doesn't "
+                        "satisfy for is_nothrow_destructiable_v requirement"); 
           auto from_ =
               std::launder(reinterpret_cast<big_aligned_storage_t__ *>(from));
           if (--from_->cnt_ == 0)
@@ -165,7 +167,8 @@ class storage_t__ final {
       return true;
     }
 
-    template <typename T> big_object_t__(T object) noexcept {
+    template <typename T> big_object_t__(T object) 
+    noexcept(noexcept(std::move(std::declval<T>())))  {
       control_t__::operation_dispatch_ = vtable<T>;
       control_t__::operation_dispatch_(control_t__::operation_t__::CSTR,
                                        &this->payload_, &object);
@@ -209,6 +212,11 @@ class storage_t__ final {
                  &const_cast<big_object_t__ *>(this)->payload_,
                  &const_cast<big_object_t__ *>(&s)->payload_);
     }
+
+    bool is_valid() const noexcept {
+      return std::launder(reinterpret_cast<const big_aligned_storage_t__ *>(&this->payload_))
+                    ->object_ != nullptr;
+    }
   };
 
   struct small_object_t__ final : control_t__ {
@@ -231,6 +239,9 @@ class storage_t__ final {
         case control_t__::operation_t__::CSTR: {
           if (nullptr == from)
             return false;
+          static_assert(std::is_nothrow_move_constructible_v<T>,
+                        "Type 'T' in small_type_t__ of storage_t__ doesn't "
+                        "satisfy for is_nothrow_move_constructible requirement");   
           new (to) T(std::move(*static_cast<T *>(from)));
         } break;
         case control_t__::operation_t__::COPY: {
@@ -238,16 +249,21 @@ class storage_t__ final {
             return false;
           static_assert(std::is_nothrow_copy_constructible_v<T>,
                         "Type 'T' in small_type_t__ of storage_t__ doesn't "
-                        "require for is_nothrow_copy_constructible");
+                        "satisfy for is_nothrow_copy_constructible requirement");
           ::new (to_) T(*static_cast<T *>(from));
         } break;
         case control_t__::operation_t__::MOVE: {
           if (nullptr == from)
             return false;
+          static_assert(std::is_nothrow_move_constructible_v<T>,
+                        "Type 'T' in small_type_t__ of storage_t__ doesn't "
+                        "satisfy for is_nothrow_move_constructible requirement");    
           new (to_) T(std::move(*static_cast<T *>(from)));
-          static_cast<T *>(from)->~T();
         } break;
         case control_t__::operation_t__::DSTR: {
+          static_assert(std::is_nothrow_destructible_v<T>,
+                        "Type 'T' in small_type_t__ of storage_t__ doesn't "
+                        "satisfy for is_nothrow_destructiable_v requirement"); 
           to_->~T();
         } break;
         case control_t__::operation_t__::COMP: {
@@ -325,13 +341,17 @@ class storage_t__ final {
   };
 
 public:
-  storage_t__() noexcept = default;
-  storage_t__(std::nullptr_t const) noexcept : storage_t__() {}
+  storage_t__()  noexcept = default;
   ~storage_t__() noexcept = default;
-  storage_t__(storage_t__ const &s) noexcept : store(s.store)  {};
-  storage_t__ &operator=(storage_t__ const &s) noexcept { store = s.store; return *this; };
-  storage_t__(storage_t__ &&s) noexcept = default;
+
+  storage_t__(storage_t__ const &s)            noexcept  = default/*: store(s.store)  {}*/;
+  storage_t__ &operator=(storage_t__ const &s) noexcept  = default/*{ store = s.store; return *this; }*/;
+
+  storage_t__(storage_t__ &&s)            noexcept = default;
   storage_t__ &operator=(storage_t__ &&s) noexcept = default;
+
+  storage_t__(std::nullptr_t const) noexcept : storage_t__() {}
+
   storage_t__ &operator=(std::nullptr_t const) noexcept {
     store = std::monostate{};
     return *this;
@@ -341,7 +361,8 @@ public:
     return *this;
   }
 
-  template <typename T> storage_t__(T f) noexcept {
+  template <typename T> storage_t__(T f) 
+  noexcept(noexcept(std::move(std::declval<T>()))) {
     using functor_t__ = typename std::decay<T>::type;
     if constexpr (std::is_function_v<std::remove_pointer_t<T>>) {
       store = ptr_function_t__(f);
@@ -349,21 +370,26 @@ public:
       store = ptr_object_t__(f);
     } else if constexpr (sizeof(functor_t__) >
                          sizeof(small_object_t__::payload_)) {
-      store = big_object_t__(std::forward<T>(f));
+      store = std::monostate{};                     
+      big_object_t__ obj_(std::forward<T>(f));
+      if(obj_.is_valid()) 
+        store = std::move(obj_);
     } else {
       store = small_object_t__(std::forward<T>(f));
     }
   }
 
-  template <typename T> storage_t__ &operator=(T f) noexcept {
+  template <typename T> storage_t__ &operator=(T f) 
+  noexcept(noexcept(std::move(std::declval<T>()))) {
     using functor_t__ = typename std::decay<T>::type;
     if constexpr (std::is_function_v<std::remove_pointer_t<T>>) {
       store = ptr_function_t__(f);
     } else if constexpr (std::is_pointer_v<T>) {
       store = ptr_object_t__(f);
     } else if constexpr (sizeof(functor_t__) >
-                         sizeof(small_object_t__::payload_)) {
-      store = big_object_t__(std::forward<T>(f));
+                         sizeof(small_object_t__::payload_)) {                    
+      big_object_t__ obj_(std::forward<T>(f));
+      store = obj_.is_valid() ? std::move(obj_) : std::monostate{};
     } else {
       store = small_object_t__(std::forward<T>(f));
     }

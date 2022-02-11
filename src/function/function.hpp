@@ -110,9 +110,9 @@ class function_t__<R(A...) CONST VOLATILE REF NOEXCEPT, SMALL_OPT_SIZE,ATOMICITY
                                                                                                                                                    \
     if constexpr (std::is_same_v<R, void>) {                                                                                                       \
       f(std::forward<A>(args)...);                                                                                                                 \
-      return std::error_code{function_status_t::F_CALL_SUCCESS};                                                                                                  \
+      return std::error_code{function_status_t::F_CALL_SUCCESS};                                                                                   \
     } else                                                                                                                                         \
-      return {f(std::forward<A>(args)...)};                                                                     \
+      return {f(std::forward<A>(args)...)};                                                                                                        \
   }                                                                                                                                                \
                                                                                                                                                    \
   template <typename T, R (T::*m)(A...) CONST VOLATILE REF NOEXCEPT>                                                                               \
@@ -137,11 +137,6 @@ class function_t__<R(A...) CONST VOLATILE REF NOEXCEPT, SMALL_OPT_SIZE,ATOMICITY
   static result_t<R> p_aplly(CONST VOLATILE detail::storage_t__<SMALL_OPT_SIZE,ATOMICITY_POLICY> *const s,                                                          \
                              A &&...args) noexcept {                                                                                               \
                                                                                                                                                    \
-    /*static_assert(std::is_nothrow_move_constructible<T>::value,*/                                                                                \
-            /*"The type T does not satisfy is_nothrow_move_constructible ");*/                                                                     \
-    /*static_assert(std::is_nothrow_destructible<T>::value,*/                                                                                      \
-            /*"The type T does not satisfy is_nothrow_destructible ");*/                                                                           \
-                                                                                                                                                   \
     if constexpr (std::is_same_v<R, void>) {                                                                                                       \
       (*const_cast<detail::storage_t__<SMALL_OPT_SIZE,ATOMICITY_POLICY> *const>(s)->template get<T>())(std::forward<A>(args)...);                                   \
       return std::error_code{function_status_t::F_CALL_SUCCESS};                                                                                                  \
@@ -155,16 +150,16 @@ class function_t__<R(A...) CONST VOLATILE REF NOEXCEPT, SMALL_OPT_SIZE,ATOMICITY
       : aplly(m),store(o) {}                                                                                                                       \
                                                                                                                                                    \
 public:                                                                                                                                            \
-  function_t__() noexcept {};                                                                                                                      \
+  function_t__()  noexcept {};                                                                                                                     \
   ~function_t__() noexcept {};                                                                                                                     \
                                                                                                                                                    \
   function_t__(std::nullptr_t const) noexcept {}                                                                                                   \
-  function_t__(int const) noexcept {}                                                                                                              \
+  function_t__(int const)            noexcept {}                                                                                                   \
                                                                                                                                                    \
                                                                                                                                                    \
   template <typename T, typename functor_t__ = typename std::decay<T>::type,                                                                       \
             typename = is_not_function_t__<T>>                                                                                                     \
-  function_t__(T &&f) noexcept : store(std::forward<T>(f)) {                                                                                       \
+  function_t__(T &&f) noexcept(noexcept(std::move(std::declval<T>()))) : store(std::forward<T>(f)) {                                               \
                                                                                                                                                    \
     static_assert( std::is_invocable_r_v<R, std::remove_pointer_t<functor_t__>, A...>,                                                             \
                    "Type 'T' can not be invocable with these arguments !" );                                                                       \
@@ -218,17 +213,12 @@ public:                                                                         
   }                                                                                                                                                \
                                                                                                                                                    \
   template <typename T, typename = is_not_function_t__<T>>                                                                                         \
-  function_t__ &operator=(T &&f) noexcept {                                                                                                        \
+  function_t__ &operator=(T &&f) noexcept(noexcept(std::move(std::declval<T>()))) {                                                                \
                                                                                                                                                    \
     using functor_t__ = typename std::decay<T>::type;                                                                                              \
     using base_type_fun_t__ = typename std::remove_pointer_t<functor_t__>;                                                                         \
     static_assert( std::is_invocable_r_v<R, base_type_fun_t__, A...>,                                                                              \
                    "Type 'T' can not be invocable with these arguments !" );                                                                       \
-                                                                                                                                                   \
-    static_assert( check_t__<!std::is_class_v<base_type_fun_t__> || /*std::is_nothrow_move_assignable_v<base_type_fun_t__> &&*/                    \
-                             std::is_nothrow_destructible_v<base_type_fun_t__>>::value,                                                            \
-                   "In function_t__ &operator=(T &&f) noexcept : "                                                                                 \
-                   "Type 'T' does not satisfy the requirements : is_nothrow_move_assignable and is_nothrow_destructible !" );                      \
                                                                                                                                                    \
     store = std::forward<T>(f);                                                                                                                    \
                                                                                                                                                    \
