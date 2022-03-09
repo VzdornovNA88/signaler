@@ -6,7 +6,7 @@
 using namespace std::chrono;
 using namespace signaler;
 
-signaler::context_t<> context_ping;
+signaler::context_t<32,signaler::detail::queue_t> context_ping;
 using object_ping_t = signaler::object_t<&context_ping>;
 
 struct ping_t : object_ping_t {

@@ -37,22 +37,23 @@
 
 namespace signaler {
 
-// template<typename slot_t, typename result_t, typename ... args_t>
-// class task_t {
-//   std::tuple<args_t...> args;
-//   result_t result
-// };
-template<size_t SIZE = 128>
-using task_t = typename signaler::function_t<void(), SIZE>;
-
 struct icontext_t {
+
+  using task_t = typename signaler::function_t<void(), 128>;
+
+  template <template <typename, size_t> class queue_type, size_t SIZE = 16>
+  using queue_tasks_t = queue_type<task_t, 16>;
+
   virtual ~icontext_t() noexcept {}
-  virtual result_t<void> schedule(task_t<>&& task_) noexcept = 0;
+  virtual result_t<void> schedule(task_t &&task_) noexcept = 0;
 };
 
-template <size_t len = 16> class context_t final : public icontext_t {
+template <size_t queue_size = 16,
+          template <typename, size_t> class T = signaler::detail::queue_t>
+class context_t final : public icontext_t {
 
-  using queue_t__ = signaler::detail::queue_t<task_t<>,len>;
+  using queue_t__ = typename signaler::detail::require_queue_concept_for<
+      queue_tasks_t<T, queue_size>>::queue_t__;
   queue_t__ queue_;
 
 public:
@@ -64,7 +65,7 @@ public:
     result_t<void> res_;
 
     for (;;) {
-      result_t<task_t<>> q_item_ = queue_.wait_pop();
+      result_t<task_t> q_item_ = queue_.wait_pop();
 
       if (q_item_)
         q_item_.value()();
@@ -77,8 +78,7 @@ public:
     return res_;
   }
 
-  virtual result_t<void>
-  schedule(task_t<>&& task_) noexcept final override {
+  virtual result_t<void> schedule(task_t &&task_) noexcept final override {
     return queue_.push(std::move(task_));
   }
 };

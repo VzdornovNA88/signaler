@@ -517,10 +517,11 @@ template <typename T> class signal_t__;
                                                                                                                                                      \
           if constexpr (sizeof...(p) > 0) {                                                                                                          \
                                                                                                                                                      \
-            task_t<> task_([args_ = std::make_tuple(                                                                                            \
-                                     arg_t__<A>{std::forward<A>(p)}...),                                                                             \
-                                 slot_ = connection_.slot_,                                                                                          \
-                                 result_weak_ = result_weak_]() mutable {                                                                            \
+            icontext_t::task_t task_(                                                                                                                \
+              [args_ = std::make_tuple(                                                                                                              \
+               arg_t__<A>{std::forward<A>(p)}...),                                                                                                   \
+               slot_ = connection_.slot_,                                                                                                            \
+               result_weak_ = result_weak_]() mutable {                                                                                              \
               if (auto result_ = result_weak_.lock()) {                                                                                              \
                 if constexpr (std::is_same_v<R, void>)                                                                                               \
                   slot_(std::get<arg_t__<A>>(args_)...);                                                                                             \
@@ -539,7 +540,7 @@ template <typename T> class signal_t__;
               }                                                                                                                                      \
             }                                                                                                                                        \
           } else {                                                                                                                                   \
-            task_t<> task_(                                                                                                                     \
+            icontext_t::task_t task_(                                                                                                                     \
                 [slot_ = connection_.slot_, result_weak_ = result_weak_]() {                                                                         \
                   if (auto result_ = result_weak_.lock()) {                                                                                          \
                     if constexpr (std::is_same_v<R, void>)                                                                                           \
