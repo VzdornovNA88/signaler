@@ -344,8 +344,8 @@ public:
   storage_t__()  noexcept = default;
   ~storage_t__() noexcept = default;
 
-  storage_t__(storage_t__ const &s)            noexcept  = default/*: store(s.store)  {}*/;
-  storage_t__ &operator=(storage_t__ const &s) noexcept  = default/*{ store = s.store; return *this; }*/;
+  storage_t__(storage_t__ const &s)            noexcept  : store(s.store)  {};
+  storage_t__ &operator=(storage_t__ const &s) noexcept  { store = s.store; return *this; };
 
   storage_t__(storage_t__ &&s)            noexcept = default;
   storage_t__ &operator=(storage_t__ &&s) noexcept = default;
