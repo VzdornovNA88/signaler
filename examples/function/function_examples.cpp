@@ -191,6 +191,25 @@ struct class_example_2 {
 };
 
 
+
+struct mock_memory_resource_t : signaler::detail::memmory_resource_noexcept_t {
+  protected:
+  void * do_allocate(size_t bytes, size_t alignment) noexcept override {
+    std::cout<<"mock_memory_resource_t::do_allocate(size_t bytes, size_t alignment) noexcept override - "<<bytes<<alignment<<std::endl;
+    return operator new ( bytes,static_cast<std::align_val_t>(alignment),std::nothrow_t{});
+  }
+  void do_deallocate(void* p, size_t bytes, size_t alignment) noexcept override {
+    std::cout<<"mock_memory_resource_t::do_deallocate(void* p, size_t bytes, size_t alignment) noexcept override "<<bytes<<alignment<<std::endl;
+    operator delete  ( p, static_cast<std::align_val_t>(alignment), std::nothrow_t{});
+  }
+  bool do_is_equal( const memmory_resource_noexcept_t& other ) const noexcept override {
+    return this == &other;
+  };
+}; 
+
+mock_memory_resource_t mock_memory_resource;
+
+
 int main([[maybe_unused]]int argc, [[maybe_unused]]char* argv[])
 {
 	std::cout << "Begine examples : " << std::endl;
@@ -267,21 +286,18 @@ int main([[maybe_unused]]int argc, [[maybe_unused]]char* argv[])
 	std::cout << "---------------------------------------------------------------" << std::endl;
 
 	// initialized by default value (nullptr)
-	function_t<void(std::string_view)> foo_string_8;
-
-	{
+	{   
 		std::string ctx = " / here is lambda context";
-		auto lambda = [ctx](std::string_view s) {
+		function_t<void(std::string_view)> foo_string_8{[ctx](std::string_view s) {
 			std::string arg_{s.data()} ;
 			auto c_str_ = (arg_ + ctx);
 			foo(c_str_.c_str());
-		};
+		},&mock_memory_resource};
 
-		foo_string_8 = lambda;
+		foo_string_8("call { 'foo_string_8' ; '[ctx](std::string_view s) {foo(s);}' } function_t from lambda expression with context (initialized by assignable operator of callable object)");
 	}
 
-	foo_string_8("call { 'foo_string_8' ; '[ctx](std::string_view s) {foo(s);}' } function_t from lambda expression with context (initialized by assignable operator of callable object)");
-
+	
 	std::cout << "---------------------------------------------------------------" << std::endl;
 
 	std::cout << std::endl;

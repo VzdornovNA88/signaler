@@ -63,8 +63,8 @@ template <typename T, size_t SMALL_OPT_SIZE,
 
 
 #define DEFINE_FUNCTION_VARIANT(CONST, VOLATILE, NOEXCEPT, REF)                                                                                    \
-template <typename R, size_t SMALL_OPT_SIZE, atomicity_policy_t ATOMICITY_POLICY, typename... A>                                                                                        \
-class function_t__<R(A...) CONST VOLATILE REF NOEXCEPT, SMALL_OPT_SIZE,ATOMICITY_POLICY> final {                                                                    \
+template <typename R, size_t SMALL_OPT_SIZE, atomicity_policy_t ATOMICITY_POLICY, typename... A>                                                   \
+class function_t__<R(A...) CONST VOLATILE REF NOEXCEPT, SMALL_OPT_SIZE,ATOMICITY_POLICY> final {                                                   \
                                                                                                                                                    \
   /*//! hotfix : msvc in vs2017(latest) doesn't compile static_assert with fold expression*/                                                       \
   template<bool r>                                                                                                                                 \
@@ -79,33 +79,37 @@ class function_t__<R(A...) CONST VOLATILE REF NOEXCEPT, SMALL_OPT_SIZE,ATOMICITY
                 "The type T of one of the function arguments does not satisfy the requirements : "                                                 \
                 "is_nothrow_copy_constructible as argument of function_t");                                                                        \
                                                                                                                                                    \
-  using wraper_t__ = result_t<R> (*)(CONST VOLATILE detail::storage_t__<SMALL_OPT_SIZE,ATOMICITY_POLICY> *const,                                                    \
+  using storage_type_t__ =  detail::storage_t__<SMALL_OPT_SIZE,ATOMICITY_POLICY>;                                                                  \
+  using wraper_t__ = result_t<R> (*)(CONST VOLATILE storage_type_t__ *const,                                                                       \
                                    A &&...) noexcept;                                                                                              \
                                                                                                                                                    \
   template <typename T>                                                                                                                            \
   using is_not_function_t__ = typename ::std::enable_if<                                                                                           \
       !::std::is_same<function_t__, typename ::std::decay<T>::type>::value>::type;                                                                 \
                                                                                                                                                    \
-  wraper_t__ aplly {p_aplly<function_status_t::F_CALL_FAILED_FUNCTION_IS_NOT_INITIALIZED>};                                                        \
-  mutable detail::storage_t__<SMALL_OPT_SIZE,ATOMICITY_POLICY> store {nullptr};                                                                                     \
+                                                                                                                                                   \
+                                                                                                                                                   \
+                                                                                                                                                   \
+  wraper_t__               aplly {p_aplly<function_status_t::F_CALL_FAILED_FUNCTION_IS_NOT_INITIALIZED>};                                          \
+  mutable storage_type_t__ store {nullptr};                                                                                                        \
                                                                                                                                                    \
   template <function_status_t status>                                                                                                              \
   static result_t<R>                                                                                                                               \
-  p_aplly([[maybe_unused]] CONST VOLATILE detail::storage_t__<SMALL_OPT_SIZE,ATOMICITY_POLICY> *const,                                                              \
+  p_aplly([[maybe_unused]] CONST VOLATILE storage_type_t__ *const,                                                                                 \
           [[maybe_unused]] A &&...args) noexcept {                                                                                                 \
                                                                                                                                                    \
-    return std::error_code{status};                                                                                                                               \
+    return std::error_code{status};                                                                                                                \
   }                                                                                                                                                \
                                                                                                                                                    \
   template <R (*f)(A...) NOEXCEPT>                                                                                                                 \
   static result_t<R>                                                                                                                               \
-  p_aplly([[maybe_unused]] CONST VOLATILE detail::storage_t__<SMALL_OPT_SIZE,ATOMICITY_POLICY> *const,                                                              \
+  p_aplly([[maybe_unused]] CONST VOLATILE storage_type_t__ *const,                                                                                 \
           A &&...args) noexcept {                                                                                                                  \
                                                                                                                                                    \
     static_assert(f != nullptr,                                                                                                                    \
                   "Error in signaller::function_t<R(A...)>::template < "                                                                           \
                   "R(*f)(A...) > static result_t<R> p_aplly([[maybe_unused]] "                                                                     \
-                  "detail::storage_t__<SMALL_OPT_SIZE,ATOMICITY_POLICY>* const, A&&... args) "                                                                      \
+                  "storage_type_t__* const, A&&... args) "                                                                                         \
                   "noexcept - The pointer 'f' to source function is null !");                                                                      \
                                                                                                                                                    \
     if constexpr (std::is_same_v<R, void>) {                                                                                                       \
@@ -116,32 +120,32 @@ class function_t__<R(A...) CONST VOLATILE REF NOEXCEPT, SMALL_OPT_SIZE,ATOMICITY
   }                                                                                                                                                \
                                                                                                                                                    \
   template <typename T, R (T::*m)(A...) CONST VOLATILE REF NOEXCEPT>                                                                               \
-  static result_t<R> p_aplly( CONST VOLATILE detail::storage_t__<SMALL_OPT_SIZE,ATOMICITY_POLICY> *const s,                                                         \
+  static result_t<R> p_aplly( CONST VOLATILE storage_type_t__ *const s,                                                                            \
                              A &&...args) noexcept {                                                                                               \
                                                                                                                                                    \
     static_assert(                                                                                                                                 \
         m != nullptr,                                                                                                                              \
         "Error in signaller::function_t<R(A...)>::template < R(T::*m)(A...) > "                                                                    \
-        "static result_t<R> p_aplly(detail::storage_t__<SMALL_OPT_SIZE,ATOMICITY_POLICY>* const, "                                                                  \
+        "static result_t<R> p_aplly(storage_type_t__* const, "                                                                                     \
         "A&&... args) noexcept - The pointer to function member 'm' of type T "                                                                    \
         "is null !");                                                                                                                              \
                                                                                                                                                    \
     if constexpr (std::is_same_v<R, void>) {                                                                                                       \
-      ((const_cast<detail::storage_t__<SMALL_OPT_SIZE,ATOMICITY_POLICY> *const>(s)->template get<T *>())->*m)(std::forward<A>(args)...);                            \
-      return std::error_code{function_status_t::F_CALL_SUCCESS};                                                                                                  \
+      ((const_cast<storage_type_t__ *const>(s)->template get<T *>())->*m)(std::forward<A>(args)...);                                               \
+      return std::error_code{function_status_t::F_CALL_SUCCESS};                                                                                   \
     } else                                                                                                                                         \
-      return {((const_cast<detail::storage_t__<SMALL_OPT_SIZE,ATOMICITY_POLICY> *const>(s)->template get<T *>())->*m)(std::forward<A>(args)...)};                                                                                                  \
+      return {((const_cast<storage_type_t__ *const>(s)->template get<T *>())->*m)(std::forward<A>(args)...)};                                      \
   }                                                                                                                                                \
                                                                                                                                                    \
   template <typename T>                                                                                                                            \
-  static result_t<R> p_aplly(CONST VOLATILE detail::storage_t__<SMALL_OPT_SIZE,ATOMICITY_POLICY> *const s,                                                          \
+  static result_t<R> p_aplly(CONST VOLATILE storage_type_t__ *const s,                                                                             \
                              A &&...args) noexcept {                                                                                               \
                                                                                                                                                    \
     if constexpr (std::is_same_v<R, void>) {                                                                                                       \
-      (*const_cast<detail::storage_t__<SMALL_OPT_SIZE,ATOMICITY_POLICY> *const>(s)->template get<T>())(std::forward<A>(args)...);                                   \
-      return std::error_code{function_status_t::F_CALL_SUCCESS};                                                                                                  \
+      (*const_cast<storage_type_t__ *const>(s)->template get<T>())(std::forward<A>(args)...);                                                      \
+      return std::error_code{function_status_t::F_CALL_SUCCESS};                                                                                   \
     } else                                                                                                                                         \
-      return {(*const_cast<detail::storage_t__<SMALL_OPT_SIZE,ATOMICITY_POLICY> *const>(s)->template get<T>())(std::forward<A>(args)...)};                                                                                                  \
+      return {(*const_cast<storage_type_t__ *const>(s)->template get<T>())(std::forward<A>(args)...)};                                             \
   }                                                                                                                                                \
                                                                                                                                                    \
   function_t__(void *const o, wraper_t__ const m) noexcept : aplly(m),store(o){}                                                                   \
@@ -159,14 +163,16 @@ public:                                                                         
                                                                                                                                                    \
   template <typename T, typename functor_t__ = typename std::decay<T>::type,                                                                       \
             typename = is_not_function_t__<T>>                                                                                                     \
-  function_t__(T &&f) noexcept(noexcept(std::move(std::declval<T>()))) : store(std::forward<T>(f)) {                                               \
+  function_t__(T &&f,memmory_resource_noexcept_t* res = nullptr) noexcept(noexcept(std::move(std::declval<T>()))) :                                \
+  store(std::forward<T>(f),res) {                                                                                                                  \
                                                                                                                                                    \
     static_assert( std::is_invocable_r_v<R, std::remove_pointer_t<functor_t__>, A...>,                                                             \
-                   "Type 'T' can not be invocable with these arguments !" );                                                                       \
+                   "In function_t__(T &&f,memmory_resource_noexcept_t* res = nullptr) -> type 'T' can not be invocable with these arguments !" );  \
                                                                                                                                                    \
     if (store != nullptr)                                                                                                                          \
       aplly = p_aplly<functor_t__>;                                                                                                                \
   }                                                                                                                                                \
+                                                                                                                                                   \
                                                                                                                                                    \
   template <typename T> function_t__(T *const o, R (T::*const m)(A...) CONST VOLATILE REF NOEXCEPT) noexcept {                                     \
                                                                                                                                                    \
@@ -362,7 +368,9 @@ DEFINE_FUNCTION_VARIANT(, , , &&)
 
 } // namespace detail
                          
-template <typename SIGNATURE, size_t SMALL_OPT_SIZE = 16, detail::atomicity_policy_t ATOMICITY_POLICY = signaler::detail::atomicity_policy_t::NON_ATOMIC>
+template <typename SIGNATURE,
+          size_t SMALL_OPT_SIZE = 16, 
+          detail::atomicity_policy_t ATOMICITY_POLICY = signaler::detail::atomicity_policy_t::NON_ATOMIC>
 using function_t =
     detail::function_t__<SIGNATURE, SMALL_OPT_SIZE,ATOMICITY_POLICY>;
 
