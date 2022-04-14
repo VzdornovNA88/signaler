@@ -2,6 +2,7 @@
 #define SIGNALER_STORAGE_POLY_ALLOC_NOEXCEPT_HPP
 
 #include <iostream>
+#include <utility>
 #include "memory_resource_noexcept.hpp"
 
 namespace signaler::detail {
@@ -12,7 +13,7 @@ protected:
     return operator new (bytes, static_cast<std::align_val_t>(alignment),
                          std::nothrow_t{});
   }
-  void do_deallocate(void *p, size_t bytes,
+  void do_deallocate(void *p, [[maybe_unused]] size_t bytes,
                      size_t alignment) noexcept override {
     operator delete (p, static_cast<std::align_val_t>(alignment),
                      std::nothrow_t{});
@@ -54,18 +55,33 @@ template <class>
     resource_->deallocate(p, count * sizeof(T), alignof(T));
   }
 
+  template <class U, class... Args>
+  void construct(U* p, Args&&... args) const noexcept(noexcept(U(std::forward<Args>(args)...))) {
+    new (p) U(std::forward<Args>(args)...);
+  }
+
+  template<class U>
+  void destroy(U* p) const noexcept {
+    p->~U();
+  }
+
+  [[nodiscard]] polymorphic_allocator_noexcept_t select_on_container_copy_construction() const noexcept {
+            return {};
+  }
+
   [[nodiscard]] memmory_resource_noexcept_t *resource() const noexcept {
     return resource_;
   }
-
-  [[nodiscard]] bool
-  operator==(const polymorphic_allocator_noexcept_t &r) noexcept {
-    return *this->resource() == *r.resource();
-  }
-
 private:
   memmory_resource_noexcept_t *resource_ = &default_resource();
 };
+
+template <class T1, class T2>
+    [[nodiscard]] bool operator==(
+        const polymorphic_allocator_noexcept_t<T1>& l, const polymorphic_allocator_noexcept_t<T2>& r) noexcept {
+        return *l.resource() == *r.resource();
+    }
+
 } // namespace signaler::detail
 
 #endif // SIGNALER_STORAGE_POLY_ALLOC_NOEXCEPT_HPP

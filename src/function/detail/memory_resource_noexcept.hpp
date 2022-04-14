@@ -4,7 +4,7 @@
 #include <cstddef>
 #include <memory>
 
-namespace signaler::detail {
+namespace signaler {
 
 class memmory_resource_noexcept_t {
 public:

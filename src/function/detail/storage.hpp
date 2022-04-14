@@ -32,6 +32,7 @@
 #ifndef SIGNALER_STORAGE_HPP
 #define SIGNALER_STORAGE_HPP
 
+#include <atomic>
 #include <cstring>
 #include <functional>
 #include <iostream>
@@ -39,7 +40,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <atomic>
 
 #include "polymorphic_allocator_noexcept.hpp"
 
@@ -47,35 +47,23 @@ namespace signaler::detail {
 
 enum class atomicity_policy_t : unsigned char { NON_ATOMIC = 0, ATOMIC = 1 };
 
-template <size_t SMALL_OPT_SIZE,
-          atomicity_policy_t ATOMICITY_POLICY /*= atomicity_policy_t::NON_ATOMIC*/>
+template <
+    size_t SMALL_OPT_SIZE,
+    atomicity_policy_t ATOMICITY_POLICY /*= atomicity_policy_t::NON_ATOMIC*/>
 class storage_t__ final {
 
   static_assert(SMALL_OPT_SIZE >= 16,
-                "The NTT parameter SMALL_OPT_SIZE for storage frame of shall be greater than or equal to 16 bytes !");
-
-  // static memmory_resource_noexcept_t *
-  // init_mem_res_or_get_initialized_if_nullptr__(
-  //     memmory_resource_noexcept_t *res) noexcept {
-    
-  //   static new_delete_noexcept_resource_t__ default_mem_res_{};
-  //   static memmory_resource_noexcept_t* mem_res_{&default_mem_res_};
-  //   if( res ) mem_res_ = res;
-  //   return mem_res_;
-  // }
-
-  // [[nodiscard]] static memmory_resource_noexcept_t *
-  // get_mem_res__() noexcept {
-  //   return init_mem_res_or_get_initialized_if_nullptr__(nullptr);
-  // }
+                "The NTT parameter SMALL_OPT_SIZE for storage frame of shall "
+                "be greater than or equal to 16 bytes !");
 
   template <typename T>
-    static auto& allocator_instance(memmory_resource_noexcept_t* res = nullptr) noexcept {
-      
-      // using allocator_t__ = std::pmr::polymorphic_allocator<T>;
-      static polymorphic_allocator_noexcept_t<T> alloc_{res};
-      return alloc_;
-    }
+  static auto &
+  allocator_instance(memmory_resource_noexcept_t *res = nullptr) noexcept {
+
+    // using allocator_t__ = std::pmr::polymorphic_allocator<T>;
+    static polymorphic_allocator_noexcept_t<T> alloc_{res};
+    return alloc_;
+  }
   struct control_t__ {
     struct small_t__ {
       std::byte array[SMALL_OPT_SIZE];
@@ -117,7 +105,8 @@ class storage_t__ final {
     using underline_counter_t__ = size_t;
     using counter_t__ =
         std::conditional_t<atomicity_policy_t::ATOMIC == ATOMICITY_POLICY,
-                           std::atomic<underline_counter_t__>, underline_counter_t__>;
+                           std::atomic<underline_counter_t__>,
+                           underline_counter_t__>;
     struct big_aligned_storage_t__ {
       counter_t__ cnt_ = 1;
       void *object_ = nullptr;
@@ -128,7 +117,8 @@ class storage_t__ final {
                                         void *to,
                                         [[maybe_unused]] void *from = nullptr) {
 
-      using allocator_traits_t__ = std::allocator_traits<polymorphic_allocator_noexcept_t<T>>;
+      using allocator_traits_t__ =
+          std::allocator_traits<polymorphic_allocator_noexcept_t<T>>;
 
       if constexpr (std::is_same_v<T, void *>)
         return false;
@@ -138,10 +128,12 @@ class storage_t__ final {
           new (to) big_aligned_storage_t__;
           auto big_obj_ =
               std::launder(reinterpret_cast<big_aligned_storage_t__ *>(to));
-          big_obj_->object_ = allocator_traits_t__::allocate(allocator_instance<T>(),1); 
-          if(big_obj_->object_)
-            new (big_obj_->object_) T(std::move(
-                *static_cast<T *>(from))); 
+          big_obj_->object_ =
+              allocator_traits_t__::allocate(allocator_instance<T>(), 1);
+          if (big_obj_->object_)
+            allocator_traits_t__::construct(allocator_instance<T>(),
+                                            static_cast<T*>(big_obj_->object_),
+                                            std::move(*static_cast<T*>(from)));
         } break;
         case control_t__::operation_t__::COPY: {
           new (to) big_aligned_storage_t__;
@@ -164,13 +156,13 @@ class storage_t__ final {
         case control_t__::operation_t__::DSTR: {
           static_assert(std::is_nothrow_destructible_v<T>,
                         "Type 'T' in big_object_t__ of storage_t__ doesn't "
-                        "satisfy for is_nothrow_destructiable_v requirement"); 
+                        "satisfy for is_nothrow_destructiable_v requirement");
           auto from_ =
               std::launder(reinterpret_cast<big_aligned_storage_t__ *>(from));
           if (--from_->cnt_ == 0 && from_->object_) {
-            auto o_ = static_cast<T *>(from_->object_);
-            o_->~T();
-            allocator_traits_t__::deallocate(allocator_instance<T>(),o_,1);
+            auto o_ = static_cast<T*>(from_->object_);
+            allocator_traits_t__::destroy(allocator_instance<T>(), o_);
+            allocator_traits_t__::deallocate(allocator_instance<T>(), o_, 1);
           }
           from_->~big_aligned_storage_t__();
 
@@ -197,8 +189,8 @@ class storage_t__ final {
       return true;
     }
 
-    template <typename T> big_object_t__(T object) 
-    noexcept(noexcept(std::move(std::declval<T>())))  {
+    template <typename T>
+    big_object_t__(T object) noexcept(noexcept(std::move(std::declval<T>()))) {
       control_t__::operation_dispatch_ = vtable<T>;
       control_t__::operation_dispatch_(control_t__::operation_t__::CSTR,
                                        &this->payload_, &object);
@@ -244,8 +236,9 @@ class storage_t__ final {
     }
 
     bool is_valid() const noexcept {
-      return std::launder(reinterpret_cast<const big_aligned_storage_t__ *>(&this->payload_))
-                    ->object_ != nullptr;
+      return std::launder(reinterpret_cast<const big_aligned_storage_t__ *>(
+                              &this->payload_))
+                 ->object_ != nullptr;
     }
   };
 
@@ -269,31 +262,34 @@ class storage_t__ final {
         case control_t__::operation_t__::CSTR: {
           if (nullptr == from)
             return false;
-          static_assert(std::is_nothrow_move_constructible_v<T>,
-                        "Type 'T' in small_type_t__ of storage_t__ doesn't "
-                        "satisfy for is_nothrow_move_constructible requirement");   
+          static_assert(
+              std::is_nothrow_move_constructible_v<T>,
+              "Type 'T' in small_type_t__ of storage_t__ doesn't "
+              "satisfy for is_nothrow_move_constructible requirement");
           new (to) T(std::move(*static_cast<T *>(from)));
         } break;
         case control_t__::operation_t__::COPY: {
           if (nullptr == from)
             return false;
-          static_assert(std::is_nothrow_copy_constructible_v<T>,
-                        "Type 'T' in small_type_t__ of storage_t__ doesn't "
-                        "satisfy for is_nothrow_copy_constructible requirement");
+          static_assert(
+              std::is_nothrow_copy_constructible_v<T>,
+              "Type 'T' in small_type_t__ of storage_t__ doesn't "
+              "satisfy for is_nothrow_copy_constructible requirement");
           ::new (to_) T(*static_cast<T *>(from));
         } break;
         case control_t__::operation_t__::MOVE: {
           if (nullptr == from)
             return false;
-          static_assert(std::is_nothrow_move_constructible_v<T>,
-                        "Type 'T' in small_type_t__ of storage_t__ doesn't "
-                        "satisfy for is_nothrow_move_constructible requirement");    
+          static_assert(
+              std::is_nothrow_move_constructible_v<T>,
+              "Type 'T' in small_type_t__ of storage_t__ doesn't "
+              "satisfy for is_nothrow_move_constructible requirement");
           new (to_) T(std::move(*static_cast<T *>(from)));
         } break;
         case control_t__::operation_t__::DSTR: {
           static_assert(std::is_nothrow_destructible_v<T>,
                         "Type 'T' in small_type_t__ of storage_t__ doesn't "
-                        "satisfy for is_nothrow_destructiable_v requirement"); 
+                        "satisfy for is_nothrow_destructiable_v requirement");
           to_->~T();
         } break;
         case control_t__::operation_t__::COMP: {
@@ -371,13 +367,16 @@ class storage_t__ final {
   };
 
 public:
-  storage_t__()  noexcept = default;
+  storage_t__() noexcept = default;
   ~storage_t__() noexcept = default;
 
-  storage_t__(storage_t__ const &s)            noexcept  : store(s.store)  {};
-  storage_t__ &operator=(storage_t__ const &s) noexcept  { store = s.store; return *this; };
+  storage_t__(storage_t__ const &s) noexcept : store(s.store){};
+  storage_t__ &operator=(storage_t__ const &s) noexcept {
+    store = s.store;
+    return *this;
+  };
 
-  storage_t__(storage_t__ &&s)            noexcept = default;
+  storage_t__(storage_t__ &&s) noexcept = default;
   storage_t__ &operator=(storage_t__ &&s) noexcept = default;
 
   storage_t__(std::nullptr_t const) noexcept : storage_t__() {}
@@ -391,8 +390,9 @@ public:
     return *this;
   }
 
-  template <typename T> storage_t__(T f,memmory_resource_noexcept_t* res = nullptr) 
-  noexcept(noexcept(std::move(std::declval<T>()))) {
+  template <typename T>
+  storage_t__(T f, memmory_resource_noexcept_t *res = nullptr) noexcept(
+      noexcept(std::move(std::declval<T>()))) {
     using functor_t__ = typename std::decay<T>::type;
 
     allocator_instance<T>(res);
@@ -403,24 +403,24 @@ public:
       store = ptr_object_t__(f);
     } else if constexpr (sizeof(functor_t__) >
                          sizeof(small_object_t__::payload_)) {
-      store = std::monostate{};                     
+      store = std::monostate{};
       big_object_t__ obj_(std::forward<T>(f));
-      if(obj_.is_valid()) 
+      if (obj_.is_valid())
         store = std::move(obj_);
     } else {
       store = small_object_t__(std::forward<T>(f));
     }
   }
 
-  template <typename T> storage_t__ &operator=(T f) 
-  noexcept(noexcept(std::move(std::declval<T>()))) {
+  template <typename T>
+  storage_t__ &operator=(T f) noexcept(noexcept(std::move(std::declval<T>()))) {
     using functor_t__ = typename std::decay<T>::type;
     if constexpr (std::is_function_v<std::remove_pointer_t<T>>) {
       store = ptr_function_t__(f);
     } else if constexpr (std::is_pointer_v<T>) {
       store = ptr_object_t__(f);
     } else if constexpr (sizeof(functor_t__) >
-                         sizeof(small_object_t__::payload_)) {                    
+                         sizeof(small_object_t__::payload_)) {
       big_object_t__ obj_(std::forward<T>(f));
       store = obj_.is_valid() ? std::move(obj_) : std::monostate{};
     } else {

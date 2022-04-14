@@ -192,7 +192,7 @@ struct class_example_2 {
 
 
 
-struct mock_memory_resource_t : signaler::detail::memmory_resource_noexcept_t {
+struct mock_memory_resource_t : signaler::memmory_resource_noexcept_t {
   protected:
   void * do_allocate(size_t bytes, size_t alignment) noexcept override {
     std::cout<<"mock_memory_resource_t::do_allocate(size_t bytes, size_t alignment) noexcept override - "<<bytes<<alignment<<std::endl;
