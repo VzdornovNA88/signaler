@@ -72,3 +72,5 @@ checks.json
 .cache/clangd/index/timers.h.3A8171E62171897F.idx
 build/
 todos
+.cache/clangd/index/memory_resource_noexcept.hpp.7B330C9C9494293F.idx
+.cache/clangd/index/polymorphic_allocator_noexcept.hpp.1983C86E9656C0D4.idx
