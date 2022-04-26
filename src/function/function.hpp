@@ -58,7 +58,7 @@ std::error_code make_error_code(function_status_t);
 
 namespace detail {
 
-template <typename T> class function_base_t__ {
+template <typename T> struct function_base_t__ {
   template <typename> static constexpr bool always_false_v = false;
   static_assert(always_false_v<T>,
                 "[signaler] : signature of callable object does not satisfy "
@@ -93,6 +93,7 @@ template <typename T> class function_base_t__ {
       using derived_t__ =                                                      \
           DERIVED<signature_t__, SMALL_OPT_SIZE, ATOMICITY_POLICY>;            \
       using result_type_t__ = R;                                               \
+      using args_t__ = std::tuple<A...>;                                       \
       using invoke_t__ = result_t<R> (*)(derived_t__ *const,                   \
                                          A &&...) noexcept;                    \
       template <typename T>                                                    \
@@ -102,6 +103,12 @@ template <typename T> class function_base_t__ {
       using ptr_method_of__ = R (T::*)(A...) CONST VOLATILE REF NOEXCEPT;      \
       using ptr_function_t__ = R (*)(A...) NOEXCEPT;                           \
       using const_ptr_function_t__ = R (*const)(A...) NOEXCEPT;                \
+      template <typename, typename = std::void_t<>>                            \
+      struct is_function_object_of__ : std::false_type {};                     \
+      template <typename T>                                                    \
+      struct is_function_object_of__<T, decltype(std::declval<T>().operator()( \
+                                            std::declval<A>()...))>            \
+          : std::true_type {};                                                 \
     };                                                                         \
                                                                                \
     typename traits_t__::derived_t__ *derived() CONST VOLATILE REF noexcept {  \
@@ -162,7 +169,6 @@ DEFINE_BASE_FUNCTION_VARIANT(, , noexcept, &&)
 
 DEFINE_BASE_FUNCTION_VARIANT(, , , &&)
 
-
 template <typename SIGNATURE, size_t SMALL_OPT_SIZE,
           atomicity_policy_t ATOMICITY_POLICY>
 class function_t__ final
@@ -174,15 +180,18 @@ class function_t__ final
       function_t__, typename ::std::decay<T>::type>::value>::type;
 
   using base_t__ = function_base_t__<function_t__>;
-  using traits_t__ = typename base_t__::traits_t__;
 
+public:
+  using traits_t = typename base_t__::traits_t__;
+
+private:
   using storage_type_t__ =
       detail::storage_t__<SMALL_OPT_SIZE, ATOMICITY_POLICY>;
   mutable storage_type_t__ store{nullptr};
 
-  template <typename traits_t__::const_ptr_function_t__ f, typename... A>
-  static result_t<typename traits_t__::result_type_t__>
-  invoke([[maybe_unused]] typename traits_t__::derived_t__ *const,
+  template <typename traits_t::ptr_function_t__ f, typename... A>
+  static result_t<typename traits_t::result_type_t__>
+  invoke([[maybe_unused]] typename traits_t::derived_t__ *const,
          A &&...args) noexcept {
 
     static_assert(
@@ -192,18 +201,17 @@ class function_t__ final
         "function_t__* const, A&&... args) "
         "noexcept - The pointer 'f' to source function is null !");
 
-    if constexpr (std::is_same_v<typename traits_t__::result_type_t__, void>) {
+    if constexpr (std::is_same_v<typename traits_t::result_type_t__, void>) {
       f(std::forward<A>(args)...);
       return std::error_code{function_status_t::F_CALL_SUCCESS};
     } else
       return {f(std::forward<A>(args)...)};
   }
 
-  template <typename T,
-            typename traits_t__::template const_ptr_method_of__<T> m,
+  template <typename T, typename traits_t::template ptr_method_of__<T> m,
             typename... A>
-  static result_t<typename traits_t__::result_type_t__>
-  invoke(typename traits_t__::derived_t__ *const self, A &&...args) noexcept {
+  static result_t<typename traits_t::result_type_t__>
+  invoke(typename traits_t::derived_t__ *const self, A &&...args) noexcept {
 
     static_assert(
         m != nullptr,
@@ -213,7 +221,7 @@ class function_t__ final
         "A&&... args) noexcept - The pointer to function member 'm' of type T "
         "is null !");
 
-    if constexpr (std::is_same_v<typename traits_t__::result_type_t__, void>) {
+    if constexpr (std::is_same_v<typename traits_t::result_type_t__, void>) {
       ((self->store.template get<T *>())->*m)(std::forward<A>(args)...);
       return std::error_code{function_status_t::F_CALL_SUCCESS};
     } else
@@ -222,8 +230,8 @@ class function_t__ final
   }
 
   template <typename T, typename... A>
-  static result_t<typename traits_t__::result_type_t__>
-  invoke(typename traits_t__::derived_t__ *const self, A &&...args) noexcept {
+  static result_t<typename traits_t::result_type_t__>
+  invoke(typename traits_t::derived_t__ *const self, A &&...args) noexcept {
 
     using functor_t__ = typename std::conditional<
         std::is_function<typename std::remove_reference<T>::type>::value,
@@ -231,7 +239,7 @@ class function_t__ final
             typename std::remove_reference<T>::type>::type,
         typename std::remove_reference<T>::type>::type;
 
-    if constexpr (std::is_same_v<typename traits_t__::result_type_t__, void>) {
+    if constexpr (std::is_same_v<typename traits_t::result_type_t__, void>) {
       (*self->store.template get<functor_t__>())(std::forward<A>(args)...);
       return std::error_code{function_status_t::F_CALL_SUCCESS};
     } else
@@ -239,11 +247,11 @@ class function_t__ final
           (*self->store.template get<functor_t__>())(std::forward<A>(args)...)};
   }
 
-  function_t__(void *const o, typename traits_t__::invoke_t__ const m) noexcept
+  function_t__(void *const o, typename traits_t::invoke_t__ const m) noexcept
       : base_t__{m}, store{o} {}
 
   function_t__(std::nullptr_t const o,
-               typename traits_t__::invoke_t__ const m) noexcept
+               typename traits_t::invoke_t__ const m) noexcept
       : base_t__{m}, store{o} {}
 
 public:
@@ -321,21 +329,19 @@ public:
     return *this = bind(null_object);
   }
 
-  template <typename traits_t__::const_ptr_function_t__ f>
+  template <typename traits_t::ptr_function_t__ f>
   static function_t__ bind() noexcept {
 
     return {nullptr, invoke<f>};
   }
 
-  template <typename T,
-            typename traits_t__::template const_ptr_method_of__<T> m>
+  template <typename T, typename traits_t::template ptr_method_of__<T> m>
   static function_t__ bind(T *const o) noexcept {
 
     return {o, invoke<T, m>};
   }
 
-  template <typename T,
-            typename traits_t__::template const_ptr_method_of__<T> m>
+  template <typename T, typename traits_t::template ptr_method_of__<T> m>
   static function_t__ bind(T &o) noexcept {
 
     return {&o, invoke<T, m>};
