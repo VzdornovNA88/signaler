@@ -116,7 +116,7 @@ struct class_example_1 {
 
 	void foo_const_lvalue_ref_qualifier_noexcept(std::string_view s) const& noexcept
 	{
-		std::cout << "void class_example_1::foo(std::string_view s) const& volatile noexcept: " << s.data() << ctx << std::endl;
+		std::cout << "void class_example_1::foo(std::string_view s) const& noexcept: " << s.data() << ctx << std::endl;
 	}
 
 	void foo_lvalue_ref_qualifier_noexcept(std::string_view s) & noexcept
@@ -161,7 +161,11 @@ struct class_example_1 {
 	}
 
 	void operator()(std::string_view s) const {
-		std::cout << "oid operator()(std::string_view s) const : " << s.data() << " - with context: " << class_ctx.data() << std::endl;
+		std::cout << "void operator()(std::string_view s) const : " << s.data() << " - with context: " << class_ctx.data() << std::endl;
+	}
+
+	void operator()(std::string_view s) {
+		std::cout << "void operator()(std::string_view s) : " << s.data() << " - with context: " << class_ctx.data() << std::endl;
 	}
 
 
@@ -368,34 +372,34 @@ int main([[maybe_unused]]int argc, [[maybe_unused]]char* argv[])
 	//! std::cout << "---------------------------------------------------------------" << std::endl;
 	
 	//! dynamic binding to class function 'foo' and initialized by function_t<void(std::string_view)>&&
-	auto foo_string_11 = function_t<void(std::string_view)>::bind(obj_example_1, &class_example_1::foo);
+	//! auto foo_string_11 = function_t<void(std::string_view)>::bind(obj_example_1, &class_example_1::foo);
 
-	foo_string_11("call { 'foo_string_11' ; 'class_example_1::foo' } function_t from class function (created by dynamic bind function and copy assignable operator)");
+	//! foo_string_11("call { 'foo_string_11' ; 'class_example_1::foo' } function_t from class function (created by dynamic bind function and copy assignable operator)");
 
-	std::cout << "---------------------------------------------------------------" << std::endl;
+	//! std::cout << "---------------------------------------------------------------" << std::endl;
 	
 	// dynamic binding to class function 'foo_const' and initialized by function_t<void(std::string_view)>&&
-	auto foo_string_12 = function_t<void(std::string_view)const>::bind(obj_example_1, &class_example_1::foo_const);
+	//! auto foo_string_12 = function_t<void(std::string_view)const>::bind(obj_example_1, &class_example_1::foo_const);
 
-	foo_string_12("call { 'foo_string_12' ; 'class_example_1::foo_const' } function_t from class function const (created by dynamic bind function and copy assignable operator)");
+	//! foo_string_12("call { 'foo_string_12' ; 'class_example_1::foo_const' } function_t from class function const (created by dynamic bind function and copy assignable operator)");
 
-	std::cout << "---------------------------------------------------------------" << std::endl;
+	//! std::cout << "---------------------------------------------------------------" << std::endl;
 	
 	// construct to class function 'foo'
-	function_t<void(std::string_view)> foo_string_11_construct(obj_example_1, &class_example_1::foo);
+	// function_t<void(std::string_view)> foo_string_11_construct(obj_example_1, &class_example_1::foo);
 
-	foo_string_11_construct("call { 'foo_string_11_construct' ; 'class_example_1::foo' } function_t from class function (created by constructor)");
+	//! foo_string_11_construct("call { 'foo_string_11_construct' ; 'class_example_1::foo' } function_t from class function (created by constructor)");
 
-	std::cout << "---------------------------------------------------------------" << std::endl;
+	//! std::cout << "---------------------------------------------------------------" << std::endl;
 
-	// construct to class function 'foo_const'
-	class_example_1* obj = nullptr/*&obj_example_1*/;
-	function_t<void(std::string_view)const> foo_string_12_construct (obj, &class_example_1::foo_const);
+	//! construct to class function 'foo_const'
+	//! class_example_1* obj = nullptr/*&obj_example_1*/;
+	//! function_t<void(std::string_view)const> foo_string_12_construct (obj, &class_example_1::foo_const);
 
-	auto result_of_foo_string_12_construct = foo_string_12_construct("call { 'foo_string_12_construct' ; 'class_example_1::foo_const' } function_t from class function const (created by constructor)");
+	//! auto result_of_foo_string_12_construct = foo_string_12_construct("call { 'foo_string_12_construct' ; 'class_example_1::foo_const' } function_t from class function const (created by constructor)");
 
-	std::cout << "call { 'foo_string_12_construct' ; 'class_example_1::foo_const' } function_t from class function const (created by constructor) ----> "
-		<< result_of_foo_string_12_construct.error().message().c_str() << std::endl;
+	//! std::cout << "call { 'foo_string_12_construct' ; 'class_example_1::foo_const' } function_t from class function const (created by constructor) ----> "
+	//! 	<< result_of_foo_string_12_construct.error().message().c_str() << std::endl;
 
 	std::cout << "---------------------------------------------------------------" << std::endl;
 
@@ -594,9 +598,9 @@ int main([[maybe_unused]]int argc, [[maybe_unused]]char* argv[])
 
 	std::cout << "---------------------------------------------------------------" << std::endl;
 
-	std_function_foo_string_21 = function_t<void(std::string_view)>::bind(obj_example_1, &class_example_1::foo);
+	//! std_function_foo_string_21 = function_t<void(std::string_view)>::bind<&class_example_1::foo>(obj_example_1);
 
-	std_function_foo_string_21("call{ 'std_function_foo_string_21'; 'function_t from function_t<void(std::string_view)>::bind with &class_example_1::foo' } std::function from function_t");
+	//! std_function_foo_string_21("call{ 'std_function_foo_string_21'; 'function_t from function_t<void(std::string_view)>::bind with &class_example_1::foo' } std::function from function_t");
 
 	std::cout << std::endl;
 	std::cout << std::endl;
@@ -637,6 +641,12 @@ int main([[maybe_unused]]int argc, [[maybe_unused]]char* argv[])
 	auto foo_int_ref_1 = function_t<void(int&)>::bind<class_example_1, &class_example_1::foo_int_inc_by_ref>(obj_example_1);
 	int I = 2;
 	foo_int_ref_1(I);
+
+
+/*const*/ class_example_1 const_obj_example_1;
+const /*volatile*/ function_t<void(std::string_view)const>  cv_func{const_obj_example_1} ;
+cv_func("dsdgsdgdg");
+
 
 	std::this_thread::sleep_for(std::chrono::seconds(10));
 

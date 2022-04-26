@@ -53,7 +53,7 @@ template <
 class storage_t__ final {
 
   static_assert(SMALL_OPT_SIZE >= 16,
-                "The NTT parameter SMALL_OPT_SIZE for storage frame of shall "
+                "[signaler] : The NTT parameter SMALL_OPT_SIZE for storage frame of shall "
                 "be greater than or equal to 16 bytes !");
 
   template <typename T>
@@ -155,7 +155,7 @@ class storage_t__ final {
         } break;
         case control_t__::operation_t__::DSTR: {
           static_assert(std::is_nothrow_destructible_v<T>,
-                        "Type 'T' in big_object_t__ of storage_t__ doesn't "
+                        "[signaler] : Type 'T' in big_object_t__ of storage_t__ doesn't "
                         "satisfy for is_nothrow_destructiable_v requirement");
           auto from_ =
               std::launder(reinterpret_cast<big_aligned_storage_t__ *>(from));
@@ -264,7 +264,7 @@ class storage_t__ final {
             return false;
           static_assert(
               std::is_nothrow_move_constructible_v<T>,
-              "Type 'T' in small_type_t__ of storage_t__ doesn't "
+              "[signaler] : Type 'T' in small_type_t__ of storage_t__ doesn't "
               "satisfy for is_nothrow_move_constructible requirement");
           new (to) T(std::move(*static_cast<T *>(from)));
         } break;
@@ -273,7 +273,7 @@ class storage_t__ final {
             return false;
           static_assert(
               std::is_nothrow_copy_constructible_v<T>,
-              "Type 'T' in small_type_t__ of storage_t__ doesn't "
+              "[signaler] : Type 'T' in small_type_t__ of storage_t__ doesn't "
               "satisfy for is_nothrow_copy_constructible requirement");
           ::new (to_) T(*static_cast<T *>(from));
         } break;
@@ -282,13 +282,13 @@ class storage_t__ final {
             return false;
           static_assert(
               std::is_nothrow_move_constructible_v<T>,
-              "Type 'T' in small_type_t__ of storage_t__ doesn't "
+              "[signaler] : Type 'T' in small_type_t__ of storage_t__ doesn't "
               "satisfy for is_nothrow_move_constructible requirement");
           new (to_) T(std::move(*static_cast<T *>(from)));
         } break;
         case control_t__::operation_t__::DSTR: {
           static_assert(std::is_nothrow_destructible_v<T>,
-                        "Type 'T' in small_type_t__ of storage_t__ doesn't "
+                        "[signaler] : Type 'T' in small_type_t__ of storage_t__ doesn't "
                         "satisfy for is_nothrow_destructiable_v requirement");
           to_->~T();
         } break;
