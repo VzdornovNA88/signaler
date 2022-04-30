@@ -1,9 +1,9 @@
 #ifndef SIGNALER_STORAGE_POLY_ALLOC_NOEXCEPT_HPP
 #define SIGNALER_STORAGE_POLY_ALLOC_NOEXCEPT_HPP
 
+#include "memory_resource_noexcept.hpp"
 #include <iostream>
 #include <utility>
-#include "memory_resource_noexcept.hpp"
 
 namespace signaler::detail {
 
@@ -29,13 +29,25 @@ protected:
   return new_delete_noexcept_resource_;
 }
 
-template<typename T>
-class polymorphic_allocator_noexcept_t {
+template <typename T> class polymorphic_allocator_noexcept_t {
 public:
-template <class>
-        friend class polymorphic_allocator_noexcept_t;
+  template <class> friend class polymorphic_allocator_noexcept_t;
 
   using value_type = T;
+
+  using pointer = T *;
+  using const_pointer = const T *;
+  using reference = T &;
+  using const_reference = const T &;
+  using size_type = std::size_t;
+  using difference_type = std::ptrdiff_t;
+  using propagate_on_container_move_assignment = std::true_type;
+  template <typename U> struct rebind {
+
+    using other = polymorphic_allocator_noexcept_t<U>;
+  };
+
+  using is_always_equal = std::true_type;
 
   polymorphic_allocator_noexcept_t() noexcept = default;
   polymorphic_allocator_noexcept_t(
@@ -56,31 +68,32 @@ template <class>
   }
 
   template <class U, class... Args>
-  void construct(U* p, Args&&... args) const noexcept(noexcept(U(std::forward<Args>(args)...))) {
+  void construct(U *p, Args &&...args) const
+      noexcept(noexcept(U(std::forward<Args>(args)...))) {
     new (p) U(std::forward<Args>(args)...);
   }
 
-  template<class U>
-  void destroy(U* p) const noexcept {
-    p->~U();
-  }
+  template <class U> void destroy(U *p) const noexcept { p->~U(); }
 
-  [[nodiscard]] polymorphic_allocator_noexcept_t select_on_container_copy_construction() const noexcept {
-            return {};
+  [[nodiscard]] polymorphic_allocator_noexcept_t
+  select_on_container_copy_construction() const noexcept {
+    return {};
   }
 
   [[nodiscard]] memmory_resource_noexcept_t *resource() const noexcept {
     return resource_;
   }
+
 private:
   memmory_resource_noexcept_t *resource_ = &default_resource();
 };
 
 template <class T1, class T2>
-    [[nodiscard]] bool operator==(
-        const polymorphic_allocator_noexcept_t<T1>& l, const polymorphic_allocator_noexcept_t<T2>& r) noexcept {
-        return *l.resource() == *r.resource();
-    }
+[[nodiscard]] bool
+operator==(const polymorphic_allocator_noexcept_t<T1> &l,
+           const polymorphic_allocator_noexcept_t<T2> &r) noexcept {
+  return *l.resource() == *r.resource();
+}
 
 } // namespace signaler::detail
 
