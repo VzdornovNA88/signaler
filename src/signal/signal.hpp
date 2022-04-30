@@ -317,8 +317,9 @@ public:
     }
 
     void disconnect() noexcept {
-      if (auto p_future_ = future_.lock())
+      if (auto p_future_ = future_.lock()) {
         p_future_->is_connected = false;
+      }
     }
 
     bool operator<(connection_t const &r) const noexcept {
@@ -548,7 +549,7 @@ private:
               [args_ = std::make_tuple(arg_t__<A>{std::forward<A>(p)}...),
                slot_ = connection_.slot_,
                result_weak_ = result_weak_]() mutable {
-                if (auto result_ = result_weak_.lock()) {
+                if (auto result_ = result_weak_.lock(); result_ && result_->is_connected) {
                   if constexpr (std::is_same_v<result_type_t__, void>)
                     slot_(std::get<arg_t__<A>>(args_)...);
                   else {
