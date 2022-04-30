@@ -69,6 +69,15 @@ template <typename T> class result_t {
   std::variant<T, std::error_code> storage_;
 
 public:
+  template <typename... Args>
+  explicit result_t(Args &&...args) noexcept
+      : storage_{std::in_place_type_t<T>{}, std::forward<Args>(args)...} {
+    static_assert(
+        std::is_nothrow_constructible_v<T, Args...>,
+        "The type T does not satisfy is_nothrow_constructible_v as type "
+        "of result_t with [Args...]");
+  }
+
   result_t(T &&v_) noexcept : storage_(std::forward<T>(v_)) {}
 
   result_t(T &v_) noexcept : storage_(v_) {}
@@ -106,8 +115,9 @@ public:
     using ret_t__ = typename std::invoke_result<callback_t, T>::type;
     static_assert(!std::is_same_v<ret_t__, void>,
                   "callback_t shall not return void type");
-    static_assert(std::is_nothrow_invocable_r_v<ret_t__, callback_t, T>,
-                  "callback_t type is not nothrow invocable with argument = [T]");
+    static_assert(
+        std::is_nothrow_invocable_r_v<ret_t__, callback_t, T>,
+        "callback_t type is not nothrow invocable with argument = [T]");
 
     if ((storage_.index() == VALUE))
       return result_t<ret_t__>{callback_(*std::get_if<VALUE>(&storage_))};
@@ -119,10 +129,13 @@ public:
   auto catch_error(callback_t &&callback_) noexcept {
     using ret_t__ =
         typename std::invoke_result<callback_t, std::error_code>::type;
-    static_assert(std::is_same_v<ret_t__, std::error_code>,
-                  "callback_t shall return std::error_code of user defined domain");
-    static_assert(std::is_nothrow_invocable_r_v <ret_t__, callback_t, std::error_code>,
-                  "callback_t type is not nothrow invocable with argument = [std::error_code]");
+    static_assert(
+        std::is_same_v<ret_t__, std::error_code>,
+        "callback_t shall return std::error_code of user defined domain");
+    static_assert(
+        std::is_nothrow_invocable_r_v<ret_t__, callback_t, std::error_code>,
+        "callback_t type is not nothrow invocable with argument = "
+        "[std::error_code]");
 
     if (!(storage_.index() == VALUE))
       storage_ = callback_(*std::get_if<ERROR>(&storage_));
@@ -182,10 +195,13 @@ public:
   auto catch_error(callback_t &&callback_) noexcept {
     using ret_t__ =
         typename std::invoke_result<callback_t, std::error_code>::type;
-    static_assert(std::is_same_v<ret_t__, std::error_code>,
-                  "callback_t shall return std::error_code of user defined domain");
-    static_assert(std::is_nothrow_invocable_r_v <ret_t__, callback_t, std::error_code>,
-                  "callback_t type is not nothrow invocable with argument = [std::error_code]");
+    static_assert(
+        std::is_same_v<ret_t__, std::error_code>,
+        "callback_t shall return std::error_code of user defined domain");
+    static_assert(
+        std::is_nothrow_invocable_r_v<ret_t__, callback_t, std::error_code>,
+        "callback_t type is not nothrow invocable with argument = "
+        "[std::error_code]");
 
     status_ = callback_(status_);
     return *this;

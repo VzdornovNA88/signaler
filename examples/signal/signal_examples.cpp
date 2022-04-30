@@ -40,7 +40,8 @@ struct B {
 	unsigned char mas[256];
 	int b__ = 0;
 
-	B(int b_) : b__(b_) {};
+	B(int b_) noexcept : b__(b_) {};
+	B(unsigned char a_,int b_) noexcept :mas{a_}, b__(b_) {};
 	B() noexcept {};
 
 	B& operator = ([[maybe_unused]]const B& s) noexcept {
@@ -69,6 +70,8 @@ struct B {
 		b__ = s.b__;
 		std::cout << "-----------------------> B(B&& s): " << std::endl;
 	}
+
+    operator int(){return b__;}
 
 	int operator()(int a) const {
 		auto res_ = b__ + a;
