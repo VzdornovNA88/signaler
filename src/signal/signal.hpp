@@ -569,7 +569,7 @@ private:
         } else {
           icontext_t::task_t task_(
               [slot_ = connection_.slot_, result_weak_ = result_weak_]() {
-                if (auto result_ = result_weak_.lock()) {
+                if (auto result_ = result_weak_.lock(); result_ && result_->is_connected) {
                   if constexpr (std::is_same_v<result_type_t__, void>)
                     slot_();
                   else {
